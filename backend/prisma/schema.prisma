@@ -1,0 +1,293 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model cameras {
+  id                   String                 @id @default(dbgenerated("extensions.uuid_generate_v4()")) @db.Uuid
+  nome                 String                 @db.VarChar(255)
+  rtsp_url             String
+  ativo                Boolean?               @default(true)
+  created_at           DateTime?              @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime?              @default(now()) @db.Timestamptz(6)
+  mediamtx_path        String?                @db.VarChar(100)
+  webrtc_url           String?
+  status               String?                @default("unknown") @db.VarChar(20)
+  status_checked_at    DateTime?              @db.Timestamptz(6)
+  empresa_id           String                 @db.Uuid
+  empresa              empresas               @relation(fields: [empresa_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  sala_velorio_cameras sala_velorio_cameras[]
+  velorio_cameras      velorio_cameras[]
+
+  @@unique([mediamtx_path])
+  @@index([ativo], map: "idx_cameras_ativo")
+  @@index([status], map: "idx_cameras_status")
+  @@index([empresa_id], map: "idx_cameras_empresa")
+}
+
+/// Uma funerária cliente (tenant). Criada pelo script 001_multiempresa.sql (prisma/sql/).
+/// CHECKs de formato em slug, hash_publico e cores existem só no banco (Prisma não modela CHECK).
+model empresas {
+  id                   String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nome                 String                 @db.VarChar(255)
+  nome_exibicao        String                 @db.VarChar(255)
+  slug                 String                 @unique @db.VarChar(40)
+  hash_publico         String                 @unique @db.VarChar(32)
+  cnpj                 String?                @db.VarChar(18)
+  logo_url             String?
+  cor_primaria         String?                @db.VarChar(7)
+  cor_secundaria       String?                @db.VarChar(7)
+  whatsapp_contato     String?                @db.VarChar(20)
+  email_contato        String?                @db.VarChar(255)
+  ativo                Boolean                @default(true)
+  dominio_customizado  String?                @unique @db.VarChar(255)
+  created_at           DateTime               @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime               @default(now()) @db.Timestamptz(6)
+  cameras              cameras[]
+  sala_velorio         sala_velorio[]
+  velorios             velorios[]
+  velorio_access_logs  velorio_access_logs[]
+  terms_acceptances    terms_acceptances[]
+  homenagens_templates homenagens_templates[]
+  profiles             profiles[]
+}
+
+/// Registro dos scripts de prisma/sql/ já aplicados neste banco (cada script se registra).
+model schema_scripts {
+  name       String   @id @db.VarChar(100)
+  applied_at DateTime @default(now()) @db.Timestamptz(6)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+/// empresa_id NULL = modelo global da plataforma (editado só pelo platform_admin).
+model homenagens_templates {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  titulo     String    @db.VarChar(255)
+  mensagem   String
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at DateTime? @default(now()) @db.Timestamptz(6)
+  empresa_id String?   @db.Uuid
+  empresa    empresas? @relation(fields: [empresa_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@index([empresa_id], map: "idx_homenagens_templates_empresa")
+}
+
+/// Unrelated to this app (used by a separate n8n integration on this VPS) — declared here only so
+/// Prisma's schema sync never tries to drop it, never queried from application code.
+model n8n_chat_histories_campax {
+  id         Int    @id @default(autoincrement())
+  session_id String @db.VarChar(255)
+  message    Json
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model profiles {
+  id              String    @id @db.Uuid
+  email           String    @unique
+  password_hash   String?
+  full_name       String?
+  role            user_role @default(viewer)
+  is_active       Boolean   @default(true)
+  invited_by      String?   @db.Uuid
+  created_at      DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime  @default(now()) @db.Timestamptz(6)
+  numero_whatsapp String?
+  agente_ia       Boolean   @default(false)
+  /// NULL só para platform_admin (CHECK profiles_empresa_platform_admin, só no banco).
+  empresa_id      String?   @db.Uuid
+  empresa         empresas? @relation(fields: [empresa_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@index([is_active], map: "idx_profiles_is_active")
+  @@index([role], map: "idx_profiles_role")
+  @@index([empresa_id], map: "idx_profiles_empresa")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model sala_velorio {
+  id                                String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nome_sala_velorio                 String                 @db.VarChar(255)
+  endereco                          String?
+  bairro                            String?                @db.VarChar(255)
+  cep                               String?                @db.VarChar(9)
+  cidade                            String?                @db.VarChar(255)
+  estado                            String?                @db.VarChar(2)
+  responsavel_sala_velorio          String?                @db.VarChar(255)
+  created_at                        DateTime?              @default(now()) @db.Timestamptz(6)
+  updated_at                        DateTime?              @default(now()) @db.Timestamptz(6)
+  google_maps_url                   String?
+  whatsapp_responsavel_sala_velorio String?                @db.VarChar(20)
+  slug                              String                 @db.VarChar(255)
+  empresa_id                        String                 @db.Uuid
+  empresa                           empresas               @relation(fields: [empresa_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  sala_velorio_cameras              sala_velorio_cameras[]
+  velorios                          velorios[]
+
+  @@unique([empresa_id, slug])
+  /// Alvo da FK composta de velorios (velório e sala sempre da mesma empresa).
+  @@unique([id, empresa_id])
+  @@index([empresa_id], map: "idx_sala_velorio_empresa")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model sala_velorio_cameras {
+  id              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sala_velorio_id String       @db.Uuid
+  camera_id       String       @db.Uuid
+  ordem           Int?         @default(0)
+  created_at      DateTime?    @default(now()) @db.Timestamptz(6)
+  cameras         cameras      @relation(fields: [camera_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  sala_velorio    sala_velorio @relation(fields: [sala_velorio_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([sala_velorio_id, camera_id])
+  @@index([camera_id], map: "idx_sala_velorio_cameras_camera")
+  @@index([sala_velorio_id], map: "idx_sala_velorio_cameras_sala")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model terms_acceptances {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  velorio_id    String?   @db.Uuid
+  nome          String
+  celular       String
+  email         String?
+  terms_version String
+  document_hash String
+  accepted_at   DateTime  @default(now()) @db.Timestamptz(6)
+  ip_address    String?
+  user_agent    String?
+  empresa_id    String    @db.Uuid
+  velorios      velorios? @relation(fields: [velorio_id], references: [id], onUpdate: NoAction)
+  empresa       empresas  @relation(fields: [empresa_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@index([empresa_id, celular, terms_version], map: "idx_terms_empresa_celular_versao")
+  @@index([accepted_at(sort: Desc)], map: "idx_terms_acceptances_accepted_at")
+  @@index([celular], map: "idx_terms_acceptances_celular")
+}
+
+model velorio_access_logs {
+  id                String    @id @default(dbgenerated("extensions.uuid_generate_v4()")) @db.Uuid
+  velorio_id        String    @db.Uuid
+  token_acesso      String    @db.VarChar(6)
+  accessed_at       DateTime? @default(now()) @db.Timestamptz(6)
+  ip_address        String?   @db.Inet
+  user_agent        String?
+  created_at        DateTime? @default(now()) @db.Timestamptz(6)
+  nome_visitante    String?
+  celular_visitante String?
+  email_visitante   String?
+  empresa_id        String    @db.Uuid
+  /// FK composta: o log e o velório são sempre da mesma empresa.
+  velorios          velorios  @relation(fields: [velorio_id, empresa_id], references: [id, empresa_id], onDelete: Cascade, onUpdate: NoAction)
+  empresa           empresas  @relation(fields: [empresa_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@index([empresa_id, accessed_at(sort: Desc)], map: "idx_access_logs_empresa_accessed")
+  @@index([accessed_at(sort: Desc)], map: "idx_access_logs_accessed_at")
+  @@index([created_at(sort: Desc)], map: "idx_access_logs_created_at")
+  @@index([token_acesso], map: "idx_access_logs_token")
+  @@index([velorio_id], map: "idx_access_logs_velorio")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model velorio_cameras {
+  id         String    @id @default(dbgenerated("extensions.uuid_generate_v4()")) @db.Uuid
+  velorio_id String    @db.Uuid
+  camera_id  String    @db.Uuid
+  ordem      Int?      @default(0)
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  cameras    cameras   @relation(fields: [camera_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  velorios   velorios  @relation(fields: [velorio_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([velorio_id, camera_id])
+  @@index([camera_id], map: "idx_velorio_cameras_camera")
+  @@index([velorio_id], map: "idx_velorio_cameras_velorio")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model velorio_homenagens {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  velorio_id String   @db.Uuid
+  autor_nome String
+  parentesco String?
+  mensagem   String
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  velorios   velorios @relation(fields: [velorio_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([created_at], map: "idx_velorio_homenagens_created_at")
+  @@index([velorio_id], map: "idx_velorio_homenagens_velorio_id")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model velorio_visitantes {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  velorio_id String    @db.Uuid
+  nome       String
+  celular    String
+  email      String?
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  velorios   velorios  @relation(fields: [velorio_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([created_at(sort: Desc)], map: "idx_velorio_visitantes_created_at")
+  @@index([velorio_id], map: "idx_velorio_visitantes_velorio_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model velorios {
+  id                           String                @id @default(dbgenerated("extensions.uuid_generate_v4()")) @db.Uuid
+  nome_falecido                String                @db.VarChar(255)
+  data_inicio                  DateTime              @db.Timestamptz(6)
+  data_fim                     DateTime              @db.Timestamptz(6)
+  token_acesso                 String                @unique @db.VarChar(6)
+  sala_velorio                 String?               @db.VarChar(255)
+  status                       velorio_status?       @default(Agendado)
+  created_at                   DateTime?             @default(now()) @db.Timestamptz(6)
+  updated_at                   DateTime?             @default(now()) @db.Timestamptz(6)
+  created_by                   String?               @db.Uuid
+  sala_velorio_id              String                @db.Uuid
+  responsavel_velorio_nome     String?               @db.VarChar(255)
+  contato_whatsapp_responsavel String?               @db.VarChar(20)
+  data_nascimento              DateTime?             @db.Date
+  data_falecimento             DateTime?             @db.Date
+  mensagem_homenagem           String?
+  foto_falecido                String?
+  data_sepultamento            DateTime?             @db.Timestamptz(6)
+  local_sepultamento           String?               @db.VarChar(255)
+  google_maps_url_sepultamento String?
+  empresa_id                   String                @db.Uuid
+  terms_acceptances            terms_acceptances[]
+  velorio_access_logs          velorio_access_logs[]
+  velorio_cameras              velorio_cameras[]
+  velorio_homenagens           velorio_homenagens[]
+  velorio_visitantes           velorio_visitantes[]
+  /// FK composta: o velório e a sala são sempre da mesma empresa.
+  sala                         sala_velorio          @relation(fields: [sala_velorio_id, empresa_id], references: [id, empresa_id], onDelete: NoAction, onUpdate: NoAction)
+  empresa                      empresas              @relation(fields: [empresa_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  /// Alvo da FK composta de velorio_access_logs.
+  @@unique([id, empresa_id])
+  @@index([empresa_id, data_inicio], map: "idx_velorios_empresa_data_inicio")
+  @@index([created_by], map: "idx_velorios_created_by")
+  @@index([data_inicio], map: "idx_velorios_data_inicio")
+  @@index([sala_velorio_id], map: "idx_velorios_sala_velorio_id")
+  @@index([status], map: "idx_velorios_status")
+  @@index([token_acesso], map: "idx_velorios_token")
+}
+
+enum user_role {
+  platform_admin
+  superadmin
+  admin
+  operador
+  viewer
+}
+
+enum velorio_status {
+  Agendado
+  Ao_Vivo   @map("Ao Vivo")
+  Encerrado
+}

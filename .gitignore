@@ -1,0 +1,43 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Environment files with secrets (never commit real values)
+.env
+.env.*
+!.env.example
+!.env.*.example
+mediamtx-sync/.env
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# PM2
+.pm2
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Backend uploaded files (local disk storage)
+backend/uploads/*
+!backend/uploads/.gitkeep
+
