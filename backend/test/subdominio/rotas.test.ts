@@ -3,7 +3,7 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { app } from '../../src/app';
 import { prisma } from '../../src/prisma';
 import { clearEmpresaOriginCache } from '../../src/lib/empresaHost';
-import { resetDb } from '../helpers';
+import { resetDb, TEST_PASSWORD } from '../helpers';
 import { duasEmpresas, Fixture } from '../isolamento/fixture';
 
 let f: Fixture;
@@ -94,5 +94,39 @@ describe('token com ?empresa=', () => {
   it('slug em maiúsculas é normalizado', async () => {
     const res = await request(app).get(`/public/velorios/${f.A.velorio.token_acesso}?empresa=${f.A.empresa.slug.toUpperCase()}`);
     expect(res.status).toBe(200);
+  });
+});
+
+describe('login com empresa_slug', () => {
+  const login = (email: string, empresa_slug?: string) =>
+    request(app).post('/auth/login').send({ email, password: TEST_PASSWORD, empresa_slug });
+
+  it('usuário da mesma empresa entra', async () => {
+    const res = await login(f.A.users.admin.email, f.A.empresa.slug);
+    expect(res.status).toBe(200);
+    expect(res.body.empresa.id).toBe(f.A.empresa.id);
+  });
+
+  it('usuário de outra empresa e platform_admin: 401 igual a senha errada', async () => {
+    const senhaErrada = await request(app).post('/auth/login').send({ email: f.A.users.admin.email, password: 'errada', empresa_slug: f.A.empresa.slug });
+    for (const email of [f.B.users.admin.email, f.platformAdmin.email]) {
+      const res = await login(email, f.A.empresa.slug);
+      expect(res.status).toBe(401);
+      expect(res.body).toEqual(senhaErrada.body);
+    }
+  });
+
+  it('senha errada continua 401 mesmo com a empresa certa', async () => {
+    const res = await request(app).post('/auth/login').send({ email: f.A.users.admin.email, password: 'errada', empresa_slug: f.A.empresa.slug });
+    expect(res.status).toBe(401);
+  });
+
+  it('sem empresa_slug: como antes (qualquer empresa e platform_admin)', async () => {
+    expect((await login(f.B.users.admin.email)).status).toBe(200);
+    expect((await login(f.platformAdmin.email)).status).toBe(200);
+  });
+
+  it('empresa_slug em maiúsculas é normalizado', async () => {
+    expect((await login(f.A.users.admin.email, f.A.empresa.slug.toUpperCase())).status).toBe(200);
   });
 });
