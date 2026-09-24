@@ -1,6 +1,6 @@
 # Multiempresa — Planejamento
 
-> Status: **em implementação** (2026-09-23): **F0–F6 (todo o MVP de código)** feitas na `feat/multiempresa` e no ar no ambiente de desenvolvimento (`app2`). O banco `campax` já foi migrado. Q1, Q2 e Q4 resolvidas (D5–D7). Specs do MVP prontas: 01–07 e 09. Pós-MVP: 08 (subdomínio).
+> Status: **em implementação** (2026-09-23): **F0–F6 (todo o MVP de código)** feitas na `feat/multiempresa` e no ar no ambiente de desenvolvimento (`app2`). O banco `campax` já foi migrado. Q1, Q2 e Q4 resolvidas (D5–D7). Specs do MVP prontas: 01–07 e 09. Pós-MVP: 08 (subdomínio, desenho aprovado em 2026-09-24).
 > Objetivo: transformar o Campax (hoje single-tenant, uma funerária por instalação) em uma
 > plataforma SaaS que atende várias funerárias ("empresas") na mesma instalação, com um
 > administrador de plataforma acima dos `superadmin` de cada empresa.
@@ -184,6 +184,7 @@ Passar a checagem para dentro do backend (`POST /cameras/:id/check-status`), usa
   visitantes aparecem nos relatórios da funerária. Quem redige? **Bloqueia o piloto** (spec 09, P3).
 - **Q6 — Subdomínio × domínio próprio na F7:** só `*.campax.com.br` (SSL curinga via desafio DNS) ou
   também domínio do cliente (certificado por domínio no nginx-proxy-manager)?
+  **Resolvida (2026-09-24):** só `<slug>.campax.com.br` — ver [08-subdominio-dominio-proprio.md](08-subdominio-dominio-proprio.md), S1.
 
 ## 6. Fases e specs
 
