@@ -60,3 +60,23 @@ export async function isEmpresaOrigin(origin: string): Promise<boolean> {
   cache.set(slug, { ok, at: Date.now() });
   return ok;
 }
+
+// Comma-separated list, e.g. "https://app2.campax.com.br,http://2.29.41.124:8080"
+export const FRONTEND_ORIGIN = (process.env.FRONTEND_ORIGIN || 'http://localhost:8080')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+export type CorsOrigin = (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => void;
+
+/**
+ * Origin check shared by Express (cors) and Socket.IO: the fixed FRONTEND_ORIGIN list, plus the
+ * subdomain of any active empresa. Requests without Origin (same-origin, curl) pass, as before.
+ */
+export const corsOrigin: CorsOrigin = (origin, callback) => {
+  if (!origin || FRONTEND_ORIGIN.includes(origin)) return callback(null, true);
+  isEmpresaOrigin(origin).then(
+    (ok) => callback(null, ok),
+    () => callback(null, false),
+  );
+};

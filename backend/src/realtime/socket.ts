@@ -1,6 +1,7 @@
 import { Server as HttpServer } from 'http';
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { prisma } from '../prisma';
+import type { CorsOrigin } from '../lib/empresaHost';
 
 let io: SocketIOServer | null = null;
 
@@ -41,7 +42,7 @@ function broadcastPresence(velorioId: string) {
   io?.to(presenceRoom(velorioId)).emit('presence:sync', { velorioId, count: users.length, users });
 }
 
-export function initRealtime(server: HttpServer, corsOrigin: string[]) {
+export function initRealtime(server: HttpServer, corsOrigin: CorsOrigin) {
   io = new SocketIOServer(server, { cors: { origin: corsOrigin } });
 
   io.on('connection', (socket: Socket) => {
