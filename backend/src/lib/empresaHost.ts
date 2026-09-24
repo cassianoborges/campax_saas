@@ -14,6 +14,8 @@ export const RESERVED_SLUGS: ReadonlySet<string> = new Set([
 export const RESERVED_SALA_SLUGS: ReadonlySet<string> = new Set(['admin', 'velorio', 'platform']);
 
 const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+/** Same cap as POST /platform/empresas. */
+const MAX_SLUG_LENGTH = 40;
 
 export function baseDomain(): string {
   return (process.env.BASE_DOMAIN ?? '').trim().toLowerCase().replace(/^\.+|\.+$/g, '');
@@ -38,15 +40,22 @@ export function parseEmpresaOrigin(origin: string): string | null {
   const suffix = `.${base}`;
   if (!host.endsWith(suffix)) return null;
   const slug = host.slice(0, -suffix.length);
-  if (!SLUG_RE.test(slug) || isReservedSlug(slug)) return null;
+  if (slug.length > MAX_SLUG_LENGTH || !SLUG_RE.test(slug) || isReservedSlug(slug)) return null;
   return slug;
 }
 
 const CACHE_MS = 60_000;
+// Slugs come from an unauthenticated header: past this many entries the cache starts over, so
+// made-up origins can't grow it without bound.
+export const CACHE_MAX_ENTRIES = 1000;
 const cache = new Map<string, { ok: boolean; at: number }>();
 
 export function clearEmpresaOriginCache() {
   cache.clear();
+}
+
+export function empresaOriginCacheSize(): number {
+  return cache.size;
 }
 
 /** True for the subdomain of an active empresa. Cached per slug for a minute (positive and negative). */
@@ -57,6 +66,7 @@ export async function isEmpresaOrigin(origin: string): Promise<boolean> {
   if (hit && Date.now() - hit.at < CACHE_MS) return hit.ok;
   const empresa = await prisma.empresas.findUnique({ where: { slug }, select: { ativo: true } });
   const ok = !!empresa?.ativo;
+  if (cache.size >= CACHE_MAX_ENTRIES) cache.clear();
   cache.set(slug, { ok, at: Date.now() });
   return ok;
 }

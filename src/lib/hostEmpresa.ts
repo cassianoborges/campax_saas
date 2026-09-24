@@ -10,7 +10,8 @@ const RESERVED_SLUGS = new Set([
 const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const DEV_KEY = 'campax:dev-empresa';
 
-const BASE_DOMAIN = (import.meta.env.VITE_BASE_DOMAIN ?? '').trim().toLowerCase();
+// Normalised like baseDomain() in the backend, so ".campax.com.br" means the same on both sides.
+const BASE_DOMAIN = (import.meta.env.VITE_BASE_DOMAIN ?? '').trim().toLowerCase().replace(/^\.+|\.+$/g, '');
 
 export function slugFromHostname(hostname: string, baseDomain: string): string | null {
   if (!baseDomain) return null;

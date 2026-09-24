@@ -34,7 +34,8 @@ const SalaPublicLink = () => {
     );
   }
 
-  if (!data) {
+  // On a subdomain, a /<hash>/<sala> of another empresa would show its brand under this address.
+  if (!data || (HOST_SLUG && data.empresa.slug !== HOST_SLUG)) {
     return <NotFound />;
   }
 

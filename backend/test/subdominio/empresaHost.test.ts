@@ -2,7 +2,8 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { prisma } from '../../src/prisma';
 import { resetDb, createEmpresa } from '../helpers';
 import {
-  clearEmpresaOriginCache, isEmpresaOrigin, isReservedSlug, parseEmpresaOrigin,
+  CACHE_MAX_ENTRIES, clearEmpresaOriginCache, empresaOriginCacheSize, isEmpresaOrigin, isReservedSlug,
+  parseEmpresaOrigin,
 } from '../../src/lib/empresaHost';
 
 beforeEach(async () => {
@@ -29,6 +30,7 @@ describe('parseEmpresaOrigin', () => {
     'https://app2.campax.com.br',
     'https://-x.campax.com.br',
     'https://x_y.campax.com.br',
+    `https://${'a'.repeat(41)}.campax.com.br`,
     'null',
     '',
   ])('recusa %s', (origin) => {
@@ -65,5 +67,10 @@ describe('isEmpresaOrigin', () => {
     expect(await isEmpresaOrigin(origin)).toBe(true);
     clearEmpresaOriginCache();
     expect(await isEmpresaOrigin(origin)).toBe(false);
+  });
+
+  it('origens inventadas não fazem o cache crescer sem limite', async () => {
+    for (let i = 0; i < CACHE_MAX_ENTRIES + 50; i++) await isEmpresaOrigin(`https://falsa${i}.campax.com.br`);
+    expect(empresaOriginCacheSize()).toBeLessThanOrEqual(CACHE_MAX_ENTRIES);
   });
 });
