@@ -6,6 +6,7 @@ import { EmpresaLogo, TransmissaoPorCampax } from '@/components/EmpresaLogo';
 import { useBranding, useDocumentTitle } from '@/hooks/useBranding';
 import NotFound from './NotFound';
 import { RegistrarHomenagemDialog } from '@/components/RegistrarHomenagemDialog';
+import { HOST_SLUG } from '@/lib/hostEmpresa';
 
 function formatDateHora(dateStr: string): string {
   const d = new Date(dateStr);
@@ -13,10 +14,12 @@ function formatDateHora(dateStr: string): string {
 }
 
 const SalaPublicLink = () => {
-  const { hashEmpresa, salaSlug } = useParams<{ hashEmpresa: string; salaSlug: string }>();
+  const { hashEmpresa, salaSlug } = useParams<{ hashEmpresa?: string; salaSlug: string }>();
   const navigate = useNavigate();
+  // /:hash/:sala works everywhere (printed QR codes); /:sala only on a subdomain (spec 08).
+  const empresaRef = hashEmpresa ? { hash: hashEmpresa } : HOST_SLUG ? { slug: HOST_SLUG } : null;
   // Unknown hash, a sala of another empresa and a suspended empresa all come back as 404 → NotFound.
-  const { data, isLoading } = useSalaPublicLink(hashEmpresa, salaSlug);
+  const { data, isLoading } = useSalaPublicLink(empresaRef, salaSlug);
   useBranding(data?.empresa);
   useDocumentTitle(data ? `${data.sala.nome_sala_velorio} — ${data.empresa.nome_exibicao}` : null);
 
