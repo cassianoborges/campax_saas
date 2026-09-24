@@ -6,6 +6,8 @@ import { CrossIcon } from '@/components/icons/MemorialIcons';
 import { useAuth } from '@/hooks/useAuth';
 import { homePathFor } from '@/hooks/useRole';
 import { Lock, Mail, Eye, EyeOff } from 'lucide-react';
+import { EmpresaLogo } from '@/components/EmpresaLogo';
+import { useHostEmpresa } from '@/hooks/useHostEmpresa';
 
 const AdminLogin = () => {
   const [email, setEmail] = useState('');
@@ -14,6 +16,7 @@ const AdminLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { signIn, user, role } = useAuth();
+  const { empresa: hostEmpresa } = useHostEmpresa();
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -41,15 +44,12 @@ const AdminLogin = () => {
         {/* Logo */}
         <div className="flex flex-col items-center mb-10">
           <div className="w-48 h-48 flex items-center justify-center mb-8">
-            <img
-              src="/logo-campax.png"
-              alt="Logo Campax"
-              className="w-full h-full object-contain drop-shadow-lg"
-            />
+            <EmpresaLogo empresa={hostEmpresa} className="w-full h-full object-contain drop-shadow-lg" />
           </div>
           <h1 className="font-heading text-2xl text-foreground">
             Área Administrativa
           </h1>
+          {hostEmpresa && <p className="text-muted-foreground mt-1">{hostEmpresa.nome_exibicao}</p>}
         </div>
 
         {/* Login form */}

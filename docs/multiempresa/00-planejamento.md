@@ -1,6 +1,6 @@
 # Multiempresa — Planejamento
 
-> Status: **em implementação** (2026-09-23): **F0–F6 (todo o MVP de código)** feitas na `feat/multiempresa` e no ar no ambiente de desenvolvimento (`app2`). O banco `campax` já foi migrado. Q1, Q2 e Q4 resolvidas (D5–D7). Specs do MVP prontas: 01–07 e 09. Pós-MVP: 08 (subdomínio, desenho aprovado em 2026-09-24).
+> Status: **em implementação** (2026-09-23): **F0–F6 (todo o MVP de código)** feitas na `feat/multiempresa` e no ar no ambiente de desenvolvimento (`app2`). O banco `campax` já foi migrado. Q1, Q2 e Q4 resolvidas (D5–D7). Specs do MVP prontas: 01–07 e 09. Pós-MVP: 08 (subdomínio — código implementado em 2026-09-24 no branch `feat/subdominio`; falta DNS/certificado e a troca do slug inicial).
 > Objetivo: transformar o Campax (hoje single-tenant, uma funerária por instalação) em uma
 > plataforma SaaS que atende várias funerárias ("empresas") na mesma instalação, com um
 > administrador de plataforma acima dos `superadmin` de cada empresa.

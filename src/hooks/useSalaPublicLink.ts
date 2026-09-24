@@ -22,22 +22,26 @@ export interface SalaPublicLinkData {
   empresa: EmpresaPublica;
 }
 
-/** Public per-sala link: the empresa is resolved by its public hash on the backend (404 → null). */
-export function useSalaPublicLink(hashEmpresa: string | undefined, salaSlug: string | undefined) {
+export type EmpresaRef = { hash: string } | { slug: string };
+
+/** Public per-sala link: the empresa by its public hash (/:hash/:sala) or its subdomain slug (/:sala). 404 → null. */
+export function useSalaPublicLink(empresaRef: EmpresaRef | null, salaSlug: string | undefined) {
+  const prefix = !empresaRef
+    ? null
+    : 'hash' in empresaRef
+      ? `/public/empresas/${encodeURIComponent(empresaRef.hash)}`
+      : `/public/empresas/slug/${encodeURIComponent(empresaRef.slug)}`;
   return useQuery({
-    queryKey: ['sala_public_link', hashEmpresa, salaSlug],
+    queryKey: ['sala_public_link', prefix, salaSlug],
     queryFn: async (): Promise<SalaPublicLinkData | null> => {
-      if (!hashEmpresa || !salaSlug) return null;
       try {
-        const { data } = await apiClient.get<{ data: SalaPublicLinkData }>(
-          `/public/empresas/${encodeURIComponent(hashEmpresa)}/salas/${encodeURIComponent(salaSlug)}`,
-        );
+        const { data } = await apiClient.get<{ data: SalaPublicLinkData }>(`${prefix}/salas/${encodeURIComponent(salaSlug!)}`);
         return data;
       } catch (error) {
         if (error instanceof ApiError && error.status === 404) return null;
         throw error;
       }
     },
-    enabled: !!hashEmpresa && !!salaSlug,
+    enabled: !!prefix && !!salaSlug,
   });
 }

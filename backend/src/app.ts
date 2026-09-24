@@ -16,6 +16,7 @@ import { publicRouter } from './routes/public';
 import { platformRouter } from './routes/platform';
 import { internalRouter } from './routes/internal';
 import { UPLOADS_DIR } from './lib/uploads';
+import { corsOrigin } from './lib/empresaHost';
 
 export const app = express();
 
@@ -24,13 +25,8 @@ export const app = express();
 // X-Forwarded-For can no longer spoof it) and req.protocol "https" (used to build upload URLs).
 app.set('trust proxy', 'loopback, linklocal, uniquelocal');
 
-// Comma-separated list, e.g. "http://app2.campax.com.br,http://2.29.41.124:8080"
-export const FRONTEND_ORIGIN = (process.env.FRONTEND_ORIGIN || 'http://localhost:8080')
-  .split(',')
-  .map((o) => o.trim())
-  .filter(Boolean);
-
-app.use(cors({ origin: FRONTEND_ORIGIN }));
+// FRONTEND_ORIGIN plus the subdomains of active empresas (spec 08).
+app.use(cors({ origin: corsOrigin }));
 app.use(express.json());
 app.use('/files', express.static(UPLOADS_DIR));
 

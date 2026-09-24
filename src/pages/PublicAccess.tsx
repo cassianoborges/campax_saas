@@ -20,6 +20,8 @@ import { UserRound, Phone, Mail } from 'lucide-react';
 import { EmpresaLogo, TransmissaoPorCampax } from '@/components/EmpresaLogo';
 import { useBranding } from '@/hooks/useBranding';
 import { EmpresaPublica } from '@/types/empresa';
+import { useHostEmpresa } from '@/hooks/useHostEmpresa';
+import { HOST_SLUG } from '@/lib/hostEmpresa';
 
 type Step = 'token' | 'confirm' | 'visitor';
 
@@ -29,8 +31,7 @@ const PublicAccess = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [pendingVelorioId, setPendingVelorioId] = useState('');
   const [pendingVelorioName, setPendingVelorioName] = useState('');
-  // Unknown until the token resolves: the token step is Campax-branded, the next steps use the
-  // velório's funerária (B5).
+  // Unknown until the token resolves: the next steps use the velório's funerária (B5).
   const [pendingEmpresa, setPendingEmpresa] = useState<EmpresaPublica | null>(null);
 
   const [nome, setNome] = useState('');
@@ -40,6 +41,7 @@ const PublicAccess = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
+  const { empresa: hostEmpresa } = useHostEmpresa();
   const { mutateAsync: registerVisitante, isPending: isRegistering } = useRegisterVisitante();
   const { mutateAsync: recordTermsAcceptance, isPending: isRecordingTerms } = useRecordTermsAcceptance();
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -66,7 +68,8 @@ const PublicAccess = () => {
     try {
       let velorio: Velorio | null = null;
       try {
-        const res = await apiClient.get<{ data: Velorio }>(`/public/velorios/${token.toUpperCase()}`);
+        const filtro = HOST_SLUG ? `?empresa=${encodeURIComponent(HOST_SLUG)}` : '';
+        const res = await apiClient.get<{ data: Velorio }>(`/public/velorios/${token.toUpperCase()}${filtro}`);
         velorio = res.data;
       } catch {
         velorio = null;
@@ -192,7 +195,9 @@ const PublicAccess = () => {
     }
   };
 
-  const empresa = step === 'token' ? null : pendingEmpresa;
+  // Token step: the address's funerária on its subdomain, Campax on the generic address (B5);
+  // later steps use the velório's funerária.
+  const empresa = step === 'token' ? hostEmpresa : pendingEmpresa;
   useBranding(empresa);
 
   return (

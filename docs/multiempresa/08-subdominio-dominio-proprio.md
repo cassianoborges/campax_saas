@@ -1,7 +1,7 @@
 # Spec 08 — F7: Subdomínio por funerária
 
 > Planejamento geral: [00-planejamento.md](00-planejamento.md) · Depende de: [04-plataforma.md](04-plataforma.md), [05-frontend-empresa-e-branding.md](05-frontend-empresa-e-branding.md), [06-mediamtx-sync.md](06-mediamtx-sync.md)
-> Status: **desenho aprovado em 2026-09-24**, a implementar.
+> Status: **implementada em 2026-09-24** (código; sem DNS/certificado — Task 11, pendente com o usuário).
 
 ## Objetivo
 
@@ -146,6 +146,28 @@ O slug `campax` geraria `campax.campax.com.br`. Como o slug é imutável pela in
 
 O frontend não tem executor de testes (D5); `getHostSlug` é verificado manualmente com `?empresa=` em
 desenvolvimento e com o subdomínio real depois da seção 3.
+
+## Notas da implementação (2026-09-24)
+
+Branch `feat/subdominio`, Tasks 1–10 do plano `docs/superpowers/plans/2026-09-24-subdominio-por-funeraria.md`.
+O código segue o desenho; divergências e pendências:
+
+- **Ordem de implantação ajustada:** no VPS, `BASE_DOMAIN` (backend) está ligado, mas `VITE_BASE_DOMAIN`
+  (frontend) fica **vazio até o DNS e o certificado existirem** — com ele ligado, o painel já mostrava e copiava
+  `https://<slug>.campax.com.br/<sala>`, que ainda não resolve. Ligar e rebuildar o frontend é o último passo
+  da seção 3/Task 11. Assim `app2` segue igual (critério 5).
+- Revisão final do branch: origem de CORS limitada a slugs de até 40 caracteres e cache de origens com teto
+  (1000 entradas), para que `Origin` inventado não faça a memória crescer; no subdomínio, `/<hash>/<sala>` de
+  outra empresa mostra "não encontrado".
+- **Verificação manual no navegador** (`?empresa=` em desenvolvimento) não foi feita durante a implementação;
+  fica para os critérios de aceite com o subdomínio real (Task 11).
+- `HostEmpresaGate` só mostra "Endereço não encontrado" para 404; erro de rede/500 deixa a página seguir
+  (falha aberta — o backend continua filtrando por empresa).
+- O `HOST_SLUG` é calculado uma vez por carregamento: trocar `?empresa=` em desenvolvimento exige recarregar.
+- Pendências menores anotadas: sem teste unitário isolado do callback de CORS (coberto ponta a ponta);
+  checagem de sala reservada repetida no POST e no PATCH; +2 avisos `no-explicit-any` em `public.ts`
+  (idioma já usado no arquivo); lista de slugs reservados duplicada backend/frontend sem teste de paridade;
+  `/velorio/:id` não é filtrado pela empresa do host (IDs são UUID e só chegam após o token).
 
 ## Fora de escopo
 

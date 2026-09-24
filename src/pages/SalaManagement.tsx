@@ -9,6 +9,7 @@ import { formatWhatsapp } from '@/lib/phoneMask';
 import { slugify } from '@/lib/slugify';
 import { useCameras } from '@/hooks/useCameras';
 import { useAuth } from '@/hooks/useAuth';
+import { empresaOrigin } from '@/lib/hostEmpresa';
 import { useToast } from '@/hooks/use-toast';
 import { Building2, Plus, Pencil, Trash2, X, Save, MapPin, Camera, Link2, Copy } from 'lucide-react';
 import {
@@ -50,8 +51,10 @@ const emptyForm: SalaFormData = {
 const SalaManagement = () => {
   const { toast } = useToast();
   const { isOperador, isAdmin, empresa } = useAuth();
-  // Prefix of the fixed public links (/:hashEmpresa/:salaSlug) — the logged-in user's empresa.
+  // Fixed public links of the logged-in user's empresa: /<sala> on its subdomain (spec 08), and
+  // /<hash>/<sala> on the generic address — still valid, it's in QR codes already handed out.
   const empresaHash = empresa?.hash_publico ?? '';
+  const salaLinkBase = (empresa && empresaOrigin(empresa.slug)) ?? `${window.location.origin}/${empresaHash}`;
   const { salas, isLoading: salasLoading, createSala, updateSala, deleteSala } = useSalasVelorio();
   const { cameras, isLoading: camerasLoading } = useCameras();
 
@@ -165,7 +168,7 @@ const SalaManagement = () => {
                     placeholder="sala_ouro"
                   />
                   <p className="text-xs text-muted-foreground mt-1 truncate">
-                    {window.location.origin}/{empresaHash}/{formData.slug || '...'}
+                    {salaLinkBase}/{formData.slug || '...'}
                   </p>
                 </div>
                 <div>
@@ -319,11 +322,11 @@ const SalaManagement = () => {
                       </div>
                       <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1 truncate">
                         <Link2 className="w-3 h-3 flex-shrink-0" />
-                        <span className="truncate">{window.location.origin}/{empresaHash}/{sala.slug}</span>
+                        <span className="truncate">{salaLinkBase}/{sala.slug}</span>
                         <button
                           type="button"
                           onClick={() => {
-                            navigator.clipboard.writeText(`${window.location.origin}/${empresaHash}/${sala.slug}`);
+                            navigator.clipboard.writeText(`${salaLinkBase}/${sala.slug}`);
                             toast({ title: "Link copiado" });
                           }}
                           className="text-gold hover:underline flex-shrink-0 flex items-center gap-1"
@@ -332,6 +335,11 @@ const SalaManagement = () => {
                           Copiar
                         </button>
                       </div>
+                      {empresa && empresaOrigin(empresa.slug) && (
+                        <p className="text-[11px] text-muted-foreground/70 truncate">
+                          Link antigo (QR codes já impressos): {window.location.origin}/{empresaHash}/{sala.slug}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">

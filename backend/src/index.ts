@@ -1,12 +1,13 @@
 import './env';
 
 import http from 'http';
-import { app, FRONTEND_ORIGIN } from './app';
+import { app } from './app';
+import { corsOrigin } from './lib/empresaHost';
 import { initRealtime } from './realtime/socket';
 
 const server = http.createServer(app);
 
-initRealtime(server, FRONTEND_ORIGIN);
+initRealtime(server, corsOrigin);
 
 const PORT = process.env.PORT || 3003;
 server.listen(PORT, () => {

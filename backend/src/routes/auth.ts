@@ -9,7 +9,7 @@ export const authRouter = Router();
 
 authRouter.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body as { email?: string; password?: string };
+    const { email, password, empresa_slug } = req.body as { email?: string; password?: string; empresa_slug?: unknown };
     if (!email || !password) {
       return res.status(400).json({ success: false, error: 'Email e senha são obrigatórios' });
     }
@@ -21,6 +21,11 @@ authRouter.post('/login', async (req, res) => {
 
     const valid = await comparePassword(password, profile.password_hash);
     if (!valid) {
+      return res.status(401).json({ success: false, error: 'Credenciais inválidas' });
+    }
+    // On a funerária's subdomain (spec 08) only its own users may log in. Same answer as a wrong
+    // password, and only after checking it, so this reveals nothing about the e-mail.
+    if (typeof empresa_slug === 'string' && empresa_slug && profile.empresa?.slug !== empresa_slug.toLowerCase()) {
       return res.status(401).json({ success: false, error: 'Credenciais inválidas' });
     }
     // Checked only after the password, so the message doesn't reveal which emails exist.

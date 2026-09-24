@@ -22,6 +22,7 @@ import { usePlatformEmpresa, usePlatformUsuarios, EmpresaPlataforma } from '@/ho
 import { useBranding } from '@/hooks/useBranding';
 import { contrastRatio } from '@/lib/branding';
 import { TenantRole } from '@/hooks/useRole';
+import { empresaOrigin } from '@/lib/hostEmpresa';
 import { generatePassword } from '@/lib/generatePassword';
 import { useToast } from '@/hooks/use-toast';
 import { CandleIcon } from '@/components/icons/MemorialIcons';
@@ -69,12 +70,17 @@ function DadosTab({ empresa, onSave, saving }: { empresa: EmpresaPlataforma; onS
         <Field label="WhatsApp de contato"><Input value={form.whatsapp_contato} onChange={set('whatsapp_contato')} /></Field>
         <Field label="E-mail de contato"><Input type="email" value={form.email_contato} onChange={set('email_contato')} /></Field>
         <div className="hidden sm:block" />
-        <Field label="Slug" hint="Usado nos endereços das câmeras; não pode ser alterado.">
+        <Field label="Slug" hint="Usado no endereço da funerária e nos das câmeras; não pode ser alterado.">
           <Input value={empresa.slug} disabled />
         </Field>
         <Field label="Hash público" hint="Início dos links e QR codes das salas; mudar quebraria os já distribuídos.">
           <Input value={empresa.hash_publico} disabled />
         </Field>
+        {empresaOrigin(empresa.slug) && (
+          <Field label="Endereço da funerária" hint="Página do token e login do painel com a marca dela.">
+            <Input value={empresaOrigin(empresa.slug)!} readOnly />
+          </Field>
+        )}
         <div className="sm:col-span-2 flex justify-end">
           <Button
             variant="gold"

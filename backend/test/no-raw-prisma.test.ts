@@ -14,6 +14,7 @@ const ALLOWED = new Set([
   'auth/middleware.ts',
   'realtime/socket.ts',
   'lib/token.ts',
+  'lib/empresaHost.ts',
 ]);
 const ALLOWED_DIRS = ['tenant/', 'scripts/'];
 
