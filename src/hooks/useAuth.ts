@@ -3,6 +3,7 @@ import { apiClient, setToken as storeToken, clearToken, getToken } from '@/lib/a
 import { useToast } from './use-toast';
 import { UserRole, ROLE_ORDER } from './useRole';
 import { EmpresaPublica } from '@/types/empresa';
+import { HOST_SLUG } from '@/lib/hostEmpresa';
 
 export type { UserRole };
 
@@ -36,8 +37,14 @@ export function useAuth() {
 
     const { data: session, isLoading } = useQuery({
         queryKey: ['profile'],
-        queryFn: async (): Promise<Session> => {
+        queryFn: async (): Promise<Session | null> => {
             const { profile, empresa } = await apiClient.get<Session>('/auth/me');
+            // On a funerária's subdomain only its own users have a session (spec 08): a token from
+            // another empresa or from platform_admin (copied between addresses) is dropped.
+            if (HOST_SLUG && empresa?.slug !== HOST_SLUG) {
+                clearToken();
+                return null;
+            }
             return { profile, empresa };
         },
         enabled: !!getToken(),
@@ -49,7 +56,7 @@ export function useAuth() {
 
     const signIn = async (email: string, password: string) => {
         try {
-            const { token, profile, empresa } = await apiClient.post<Session & { token: string }>('/auth/login', { email, password });
+            const { token, profile, empresa } = await apiClient.post<Session & { token: string }>('/auth/login', { email, password, empresa_slug: HOST_SLUG ?? undefined });
             storeToken(token);
             queryClient.setQueryData<Session>(['profile'], { profile, empresa });
             toast({ title: "Login realizado", description: "Bem-vindo de volta!" });
