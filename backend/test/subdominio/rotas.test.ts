@@ -49,3 +49,50 @@ describe('CORS', () => {
     expect(res.headers[ACAO]).toBe(origin);
   });
 });
+
+describe('rotas públicas por slug', () => {
+  it('marca da empresa por slug: mesmos campos da rota por hash', async () => {
+    const porSlug = await request(app).get(`/public/empresas/slug/${f.A.empresa.slug}`);
+    const porHash = await request(app).get(`/public/empresas/${f.A.empresa.hash_publico}`);
+    expect(porSlug.status).toBe(200);
+    expect(porSlug.body.data).toEqual(porHash.body.data);
+  });
+
+  it('empresa suspensa, inexistente ou slug reservado → 404', async () => {
+    await prisma.empresas.update({ where: { id: f.B.empresa.id }, data: { ativo: false } });
+    for (const slug of [f.B.empresa.slug, 'naoexiste', 'app2']) {
+      expect((await request(app).get(`/public/empresas/slug/${slug}`)).status).toBe(404);
+      expect((await request(app).get(`/public/empresas/slug/${slug}/salas/sala-1`)).status).toBe(404);
+    }
+  });
+
+  it('sala por slug da empresa: cada empresa vê a sua sala-1', async () => {
+    const a = await request(app).get(`/public/empresas/slug/${f.A.empresa.slug}/salas/sala-1`);
+    const b = await request(app).get(`/public/empresas/slug/${f.B.empresa.slug}/salas/sala-1`);
+    expect(a.status).toBe(200);
+    expect(a.body.data.sala.id).toBe(f.A.sala.id);
+    expect(a.body.data.atual.id).toBe(f.A.velorio.id);
+    expect(b.body.data.sala.id).toBe(f.B.sala.id);
+  });
+
+  it('sala inexistente na empresa → 404', async () => {
+    expect((await request(app).get(`/public/empresas/slug/${f.A.empresa.slug}/salas/nao-existe`)).status).toBe(404);
+  });
+});
+
+describe('token com ?empresa=', () => {
+  it('mesma empresa → 200; outra empresa → 404 igual a token inexistente; sem parâmetro → como antes', async () => {
+    const token = f.A.velorio.token_acesso;
+    expect((await request(app).get(`/public/velorios/${token}?empresa=${f.A.empresa.slug}`)).status).toBe(200);
+    const outra = await request(app).get(`/public/velorios/${token}?empresa=${f.B.empresa.slug}`);
+    const inexistente = await request(app).get('/public/velorios/ZZZZZZ');
+    expect(outra.status).toBe(404);
+    expect(outra.body).toEqual(inexistente.body);
+    expect((await request(app).get(`/public/velorios/${token}`)).status).toBe(200);
+  });
+
+  it('slug em maiúsculas é normalizado', async () => {
+    const res = await request(app).get(`/public/velorios/${f.A.velorio.token_acesso}?empresa=${f.A.empresa.slug.toUpperCase()}`);
+    expect(res.status).toBe(200);
+  });
+});

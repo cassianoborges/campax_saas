@@ -1,8 +1,10 @@
 import { Router, Response } from 'express';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../prisma';
 import { velorioInclude } from './velorios';
 import { emitHomenagensChanged } from '../realtime/socket';
 import { EMPRESA_PUBLIC_SELECT } from '../lib/empresa';
+import { isReservedSlug } from '../lib/empresaHost';
 import { signStreamToken, streamUrl, velorioNoAr, velorioTokenTtlSeconds } from '../lib/streamToken';
 
 // Unauthenticated routes. They use the raw `prisma` client, but every query starts from a public
@@ -76,6 +78,11 @@ function sendPublicVelorio(res: Response, velorio: PublicVelorio | null) {
 
 const isUuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 
+/** `?empresa=<slug>` sent by the subdomain frontend (spec 08): narrows results, never widens them. */
+function empresaSlugFilter(value: unknown): string | null {
+  return typeof value === 'string' && value ? value.toLowerCase() : null;
+}
+
 /** The velório (id + empresa) behind a public :id, or null if missing or its empresa is suspended. */
 async function loadPublicVelorio(id: string) {
   if (!isUuid(id)) return null;
@@ -92,6 +99,8 @@ publicRouter.get('/velorios/:token', async (req, res) => {
     if (token.length !== 6) return res.status(400).json({ success: false, error: 'Token inválido' });
 
     const velorio = await prisma.velorios.findUnique({ where: { token_acesso: token }, include: velorioPublicInclude });
+    const empresaSlug = empresaSlugFilter(req.query.empresa);
+    if (velorio && empresaSlug && velorio.empresa.slug !== empresaSlug) return notFound(res);
     sendPublicVelorio(res, velorio);
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -109,12 +118,69 @@ publicRouter.get('/velorios/id/:id', async (req, res) => {
   }
 });
 
+type EmpresaRow = Prisma.empresasGetPayload<typeof EMPRESA_PUBLIC_WITH_STATUS> | null;
+
+async function findEmpresaBySlug(slug: string): Promise<EmpresaRow> {
+  const s = slug.toLowerCase();
+  if (isReservedSlug(s)) return null;
+  return prisma.empresas.findUnique({ where: { slug: s }, ...EMPRESA_PUBLIC_WITH_STATUS });
+}
+
+function sendEmpresa(res: Response, empresaRow: EmpresaRow) {
+  const data = publicEmpresa(empresaRow);
+  if (!data) return notFound(res, 'Empresa não encontrada');
+  res.json({ success: true, data });
+}
+
+// Fixed public link of a sala: current velório (or the next one) of a sala of this empresa.
+async function sendSalaPublicLink(res: Response, empresaRow: EmpresaRow, salaSlug: string) {
+  const empresa = publicEmpresa(empresaRow);
+  if (!empresa) return notFound(res, 'Sala não encontrada');
+
+  const sala = await prisma.sala_velorio.findUnique({
+    where: { empresa_id_slug: { empresa_id: empresa.id, slug: salaSlug } },
+    select: { id: true, nome_sala_velorio: true, cidade: true, estado: true },
+  });
+  if (!sala) return notFound(res, 'Sala não encontrada');
+
+  const velorios = await prisma.velorios.findMany({
+    where: { sala_velorio_id: sala.id },
+    select: { id: true, nome_falecido: true, data_inicio: true, data_fim: true, data_sepultamento: true },
+  });
+
+  const now = new Date();
+  const aoVivos = velorios.filter((v) => now >= v.data_inicio && now <= v.data_fim);
+  const atual = aoVivos.length
+    ? aoVivos.reduce((maisRecente, v) => (v.data_inicio > maisRecente.data_inicio ? v : maisRecente))
+    : null;
+  const proximo = atual
+    ? null
+    : velorios.filter((v) => v.data_inicio > now).sort((a, b) => a.data_inicio.getTime() - b.data_inicio.getTime())[0] ?? null;
+
+  res.json({ success: true, data: { sala, atual, proximo, empresa } });
+}
+
+// Subdomain frontend (spec 08): the empresa comes from <slug>.campax.com.br. Registered before
+// '/empresas/:hash' routes only for readability — the paths don't overlap.
+publicRouter.get('/empresas/slug/:slug', async (req, res) => {
+  try {
+    sendEmpresa(res, await findEmpresaBySlug(req.params.slug));
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+publicRouter.get('/empresas/slug/:slug/salas/:salaSlug', async (req, res) => {
+  try {
+    await sendSalaPublicLink(res, await findEmpresaBySlug(req.params.slug), req.params.salaSlug);
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 publicRouter.get('/empresas/:hash', async (req, res) => {
   try {
-    const empresa = await prisma.empresas.findUnique({ where: { hash_publico: req.params.hash }, ...EMPRESA_PUBLIC_WITH_STATUS });
-    const data = publicEmpresa(empresa);
-    if (!data) return notFound(res, 'Empresa não encontrada');
-    res.json({ success: true, data });
+    sendEmpresa(res, await prisma.empresas.findUnique({ where: { hash_publico: req.params.hash }, ...EMPRESA_PUBLIC_WITH_STATUS }));
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -125,30 +191,7 @@ publicRouter.get('/empresas/:hash', async (req, res) => {
 publicRouter.get('/empresas/:hash/salas/:slug', async (req, res) => {
   try {
     const empresaRow = await prisma.empresas.findUnique({ where: { hash_publico: req.params.hash }, ...EMPRESA_PUBLIC_WITH_STATUS });
-    const empresa = publicEmpresa(empresaRow);
-    if (!empresa) return notFound(res, 'Sala não encontrada');
-
-    const sala = await prisma.sala_velorio.findUnique({
-      where: { empresa_id_slug: { empresa_id: empresa.id, slug: req.params.slug } },
-      select: { id: true, nome_sala_velorio: true, cidade: true, estado: true },
-    });
-    if (!sala) return notFound(res, 'Sala não encontrada');
-
-    const velorios = await prisma.velorios.findMany({
-      where: { sala_velorio_id: sala.id },
-      select: { id: true, nome_falecido: true, data_inicio: true, data_fim: true, data_sepultamento: true },
-    });
-
-    const now = new Date();
-    const aoVivos = velorios.filter((v) => now >= v.data_inicio && now <= v.data_fim);
-    const atual = aoVivos.length
-      ? aoVivos.reduce((maisRecente, v) => (v.data_inicio > maisRecente.data_inicio ? v : maisRecente))
-      : null;
-    const proximo = atual
-      ? null
-      : velorios.filter((v) => v.data_inicio > now).sort((a, b) => a.data_inicio.getTime() - b.data_inicio.getTime())[0] ?? null;
-
-    res.json({ success: true, data: { sala, atual, proximo, empresa } });
+    await sendSalaPublicLink(res, empresaRow, req.params.slug);
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }
