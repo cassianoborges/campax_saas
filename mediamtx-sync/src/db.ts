@@ -1,5 +1,6 @@
 import { Pool } from 'pg';
 import dotenv from 'dotenv';
+import { needsRotation } from './paths';
 
 dotenv.config();
 
@@ -25,14 +26,14 @@ export async function getAllActiveCameras(): Promise<Camera[]> {
     return rows;
 }
 
-/** Every camera (active or not, any empresa) whose path isn't in the managed `<slug>-<random>` format. */
-export async function getCamerasWithLegacyPaths(managed: RegExp): Promise<(Camera & { ativo: boolean; empresa_ativa: boolean })[]> {
+/** Cameras whose MediaMTX path must be regenerated (legacy name or stale empresa prefix). */
+export async function getCamerasToRotate(): Promise<(Camera & { ativo: boolean; empresa_ativa: boolean })[]> {
     const { rows } = await pool.query<Camera & { ativo: boolean; empresa_ativa: boolean }>(`
         SELECT c.id, c.nome, c.rtsp_url, c.mediamtx_path, c.webrtc_url, c.ativo, e.slug AS empresa_slug, e.ativo AS empresa_ativa
         FROM cameras c JOIN empresas e ON e.id = c.empresa_id
         WHERE c.mediamtx_path IS NOT NULL
         ORDER BY c.created_at`);
-    return rows.filter((c) => !managed.test(c.mediamtx_path!));
+    return rows.filter((c) => needsRotation(c.mediamtx_path!, c.empresa_slug));
 }
 
 export async function updateCameraUrls(cameraId: string, mediamtxPath: string, webrtcUrl: string): Promise<void> {

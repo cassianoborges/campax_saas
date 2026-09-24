@@ -1,6 +1,6 @@
-import { getCamerasWithLegacyPaths, updateCameraUrls, closePool } from '../db';
+import { getCamerasToRotate, updateCameraUrls, closePool } from '../db';
 import { mediamtxAPI } from '../mediamtx-api';
-import { generatePathName, MANAGED_PATH } from '../paths';
+import { generatePathName } from '../paths';
 
 // One-off (spec 06, A2): replaces guessable legacy path names ("santana", "uruacu"...) with
 // `<empresa slug>-<random>`. For each camera: create the new path, point the DB (mediamtx_path,
@@ -8,14 +8,16 @@ import { generatePathName, MANAGED_PATH } from '../paths';
 // load, so they pick up the new address by themselves; viewers watching at that moment lose the
 // image until they reload — run it with no velório live.
 //
+// Also replaces paths whose prefix is not the empresa's current slug (spec 08, slug change before go-live).
+//
 //   npm run rotate-paths            (dry run)
 //   npm run rotate-paths -- --apply
 
 async function main() {
     const apply = process.argv.includes('--apply');
-    const cameras = await getCamerasWithLegacyPaths(MANAGED_PATH);
+    const cameras = await getCamerasToRotate();
     const existing = new Set((await mediamtxAPI.listConfigPaths()).map((p) => p.name));
-    console.log(`${cameras.length} câmera(s) com nome antigo${apply ? '' : ' — simulação, use --apply para aplicar'}`);
+    console.log(`${cameras.length} câmera(s) com caminho a trocar${apply ? '' : ' — simulação, use --apply para aplicar'}`);
 
     for (const camera of cameras) {
         const oldName = camera.mediamtx_path!;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { generatePathName, MANAGED_PATH } from '../src/paths';
+import { generatePathName, MANAGED_PATH, needsRotation } from '../src/paths';
 import { planSync, CameraToSync } from '../src/plan';
 
 const cam = (id: string, path: string, rtsp = `rtsp://cam-${id}.example.com/x`): CameraToSync => ({ id, rtsp_url: rtsp, mediamtx_path: path });
@@ -20,6 +20,24 @@ describe('generatePathName', () => {
         for (const legacy of ['santana', 'uruacu2', 'sala_anapolis', 'all_others', 'campax-curto']) {
             expect(MANAGED_PATH.test(legacy), legacy).toBe(false);
         }
+    });
+});
+
+describe('needsRotation', () => {
+    it('nome antigo (fora do formato) precisa trocar', () => {
+        expect(needsRotation('santana', 'campax')).toBe(true);
+    });
+
+    it('prefixo de outro slug (empresa renomeada) precisa trocar', () => {
+        expect(needsRotation('campax-abcdefghij', 'funeraria-x')).toBe(true);
+    });
+
+    it('prefixo que só começa igual não engana', () => {
+        expect(needsRotation('funeraria-xyz-abcdefghij', 'funeraria-x')).toBe(true);
+    });
+
+    it('prefixo correto não troca', () => {
+        expect(needsRotation(generatePathName('funeraria-x'), 'funeraria-x')).toBe(false);
     });
 });
 
