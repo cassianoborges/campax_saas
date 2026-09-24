@@ -5,6 +5,7 @@ import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../prisma';
+import { isReservedSlug } from '../lib/empresaHost';
 import { requirePlatformAdmin } from '../auth/middleware';
 import { hashPassword } from '../auth/password';
 import { handleError, pick, TEMPLATE_FIELDS, TENANT_ROLES } from '../lib/http';
@@ -134,6 +135,7 @@ platformRouter.post('/empresas', async (req, res) => {
     if (!SLUG_RE.test(slug) || slug.length > 40) {
       return bad(res, 'Slug inválido: use letras minúsculas, números e hífens (máx. 40)');
     }
+    if (isReservedSlug(slug)) return bad(res, 'Esse identificador é reservado');
 
     const email = body.superadmin?.email?.trim().toLowerCase();
     const password = body.superadmin?.password ?? '';

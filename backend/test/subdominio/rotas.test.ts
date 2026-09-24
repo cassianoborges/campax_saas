@@ -130,3 +130,30 @@ describe('login com empresa_slug', () => {
     expect((await login(f.A.users.admin.email, f.A.empresa.slug.toUpperCase())).status).toBe(200);
   });
 });
+
+describe('slugs reservados', () => {
+  const novaEmpresa = (slug: string) => ({
+    empresa: { nome: 'Funerária Nova', nome_exibicao: 'Nova', slug },
+    superadmin: { email: `dono-${slug}@example.com`, password: 'senha-forte-1' },
+  });
+
+  it('empresa com slug reservado → 400 e nada é criado', async () => {
+    const res = await request(app).post('/platform/empresas').set(f.as(f.platformAdmin)).send(novaEmpresa('app2'));
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('Esse identificador é reservado');
+    expect(await prisma.empresas.count({ where: { slug: 'app2' } })).toBe(0);
+  });
+
+  it.each(['admin', 'velorio', 'platform'])('sala com slug %s → 400 (criar e editar)', async (slug) => {
+    const criar = await request(app).post('/salas').set(f.as(f.A.users.operador)).send({ nome_sala_velorio: 'Sala X', slug });
+    expect(criar.status).toBe(400);
+    const editar = await request(app).patch(`/salas/${f.A.sala.id}`).set(f.as(f.A.users.operador)).send({ slug });
+    expect(editar.status).toBe(400);
+    expect((await prisma.sala_velorio.findUnique({ where: { id: f.A.sala.id } }))!.slug).toBe('sala-1');
+  });
+
+  it('sala com slug comum continua funcionando', async () => {
+    const res = await request(app).post('/salas').set(f.as(f.A.users.operador)).send({ nome_sala_velorio: 'Sala Y', slug: 'sala-y' });
+    expect(res.status).toBe(200);
+  });
+});
