@@ -113,13 +113,15 @@ platformUsuariosRouter.patch('/:id', async (req, res) => {
     const { full_name, role } = (req.body ?? {}) as Record<string, unknown>;
     if (role !== undefined && !isTenantRole(role)) return bad(res, 'Papel inválido');
     const user = await carregar(req.params.id);
-    if (role !== undefined && role !== 'superadmin' && ehSuperadminAtivo(user)) {
-      await assertNaoDeixaSemSuperadmin(user.id, empresasDe(user));
-    }
     const data: Prisma.profilesUpdateInput = {};
     if (typeof full_name === 'string') data.full_name = full_name.trim() || null;
     if (role !== undefined) data.role = role as TenantRole;
-    const updated = await prisma.profiles.update({ where: { id: user.id }, data, include: USUARIO_INCLUDE });
+    const updated = await prisma.$transaction(async (tx) => {
+      if (role !== undefined && role !== 'superadmin' && ehSuperadminAtivo(user)) {
+        await assertNaoDeixaSemSuperadmin(tx, user.id, empresasDe(user));
+      }
+      return tx.profiles.update({ where: { id: user.id }, data, include: USUARIO_INCLUDE });
+    });
     log(req, 'editar-usuario', user.id, role !== undefined ? `papel=${role}` : '');
     res.json({ success: true, data: serializar(updated) });
   } catch (error) {
@@ -144,8 +146,10 @@ platformUsuariosRouter.patch('/:id/ativo', async (req, res) => {
   try {
     const is_active = !!req.body?.is_active;
     const user = await carregar(req.params.id);
-    if (!is_active && ehSuperadminAtivo(user)) await assertNaoDeixaSemSuperadmin(user.id, empresasDe(user));
-    const updated = await prisma.profiles.update({ where: { id: user.id }, data: { is_active }, include: USUARIO_INCLUDE });
+    const updated = await prisma.$transaction(async (tx) => {
+      if (!is_active && ehSuperadminAtivo(user)) await assertNaoDeixaSemSuperadmin(tx, user.id, empresasDe(user));
+      return tx.profiles.update({ where: { id: user.id }, data: { is_active }, include: USUARIO_INCLUDE });
+    });
     log(req, is_active ? 'ativar-usuario' : 'desativar-usuario', user.id);
     res.json({ success: true, data: serializar(updated) });
   } catch (error) {
@@ -175,9 +179,11 @@ platformUsuariosRouter.delete('/:id/empresas/:empresaId', async (req, res) => {
     if (!user.vinculos.some((v) => v.empresa_id === req.params.empresaId)) {
       return res.status(404).json({ success: false, error: 'Não encontrado' });
     }
-    if (ehSuperadminAtivo(user)) await assertNaoDeixaSemSuperadmin(user.id, [req.params.empresaId]);
-    await prisma.usuario_empresas.delete({
-      where: { profile_id_empresa_id: { profile_id: user.id, empresa_id: req.params.empresaId } },
+    await prisma.$transaction(async (tx) => {
+      if (ehSuperadminAtivo(user)) await assertNaoDeixaSemSuperadmin(tx, user.id, [req.params.empresaId]);
+      await tx.usuario_empresas.delete({
+        where: { profile_id_empresa_id: { profile_id: user.id, empresa_id: req.params.empresaId } },
+      });
     });
     log(req, 'desvincular', user.id, `empresa=${req.params.empresaId}`);
     res.json({ success: true, data: serializar(await carregar(user.id)) });

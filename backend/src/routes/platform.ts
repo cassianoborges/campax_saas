@@ -328,11 +328,13 @@ platformRouter.patch('/empresas/:id/usuarios/:uid/ativo', async (req, res) => {
   try {
     const is_active = !!req.body?.is_active;
     const user = await usuarioDaEmpresa(req.params.id, req.params.uid);
-    if (!is_active && user.role === 'superadmin' && user.is_active) {
-      const vinculos = await prisma.usuario_empresas.findMany({ where: { profile_id: user.id }, select: { empresa_id: true } });
-      await assertNaoDeixaSemSuperadmin(user.id, vinculos.map((v) => v.empresa_id));
-    }
-    const updated = await prisma.profiles.update({ where: { id: user.id }, data: { is_active } });
+    const updated = await prisma.$transaction(async (tx) => {
+      if (!is_active && user.role === 'superadmin' && user.is_active) {
+        const vinculos = await tx.usuario_empresas.findMany({ where: { profile_id: user.id }, select: { empresa_id: true } });
+        await assertNaoDeixaSemSuperadmin(tx, user.id, vinculos.map((v) => v.empresa_id));
+      }
+      return tx.profiles.update({ where: { id: user.id }, data: { is_active } });
+    });
     log(req, is_active ? 'ativar-usuario' : 'desativar-usuario', req.params.id, `usuario=${user.id}`);
     res.json({ success: true, data: omitPasswordHash(updated) });
   } catch (error) {

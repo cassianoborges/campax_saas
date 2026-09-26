@@ -179,3 +179,15 @@ describe('upload de foto (C5)', () => {
     expect(res.body.url).toMatch(/^https:\/\//);
   });
 });
+
+describe('transação de req.db', () => {
+  it('continua filtrada pela empresa (as rotas de /users gravam por ela)', async () => {
+    const { prismaForEmpresa } = await import('../../src/tenant/prismaForEmpresa');
+    const db = prismaForEmpresa(f.A.empresa.id, f.A.users.superadmin.id);
+    const vistos = await db.$transaction((tx) => tx.cameras.findMany({ select: { id: true } }));
+    expect(vistos.map((c) => c.id)).not.toContain(f.B.camera.id);
+    await expect(
+      db.$transaction((tx) => tx.profiles.update({ where: { id: f.B.users.viewer.id }, data: { full_name: 'hackeado' } })),
+    ).rejects.toThrow();
+  });
+});
