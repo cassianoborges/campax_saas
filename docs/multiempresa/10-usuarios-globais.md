@@ -1,7 +1,7 @@
 # Spec 10 — Usuários globais e vínculo com várias empresas
 
 > Planejamento geral: [00-planejamento.md](00-planejamento.md) · Depende de: [03-backend-isolamento.md](03-backend-isolamento.md), [04-plataforma.md](04-plataforma.md), [08-subdominio-dominio-proprio.md](08-subdominio-dominio-proprio.md)
-> Status: **spec aprovada em conversa em 2026-09-26**, aguardando revisão do texto e o plano de implementação.
+> Status: **implementada e no ar em 2026-09-26**.
 
 ## Objetivo
 
@@ -211,6 +211,40 @@ Tudo ainda é ambiente de desenvolvimento, sem janela de manutenção. Ordem, co
 4. conferir: login do superadmin da Senap sem escolher empresa (token antigo continua valendo), `/platform/usuarios`
    lista os 5 usuários com uma empresa cada;
 5. `refresh-dev-db.sh all`.
+
+## Notas da implementação (2026-09-26)
+
+- **Teste da migração:** em vez de um teste Vitest sobre `campax_test`, `003_usuario_empresas.sql` foi conferido
+  rodando em `campax_dev` (cópia com dados reais): a checagem de contagem do próprio script (vínculos criados =
+  perfis com `empresa_id`) cobre a divergência, e rodá-lo de novo é recusado (registro em `schema_scripts`).
+- **`prismaForEmpresa`** (`backend/src/tenant/prismaForEmpresa.ts`): `profiles` saiu de `DIRECT_MODELS` e ganhou
+  filtro próprio via `usuario_empresas` (`{ vinculos: { some: { empresa_id } } }` em leituras e updates; um
+  `create` de `profiles` pelo `req.db` cria o vínculo com a empresa de quem criou). `usuario_empresas` em si não
+  é acessado por `req.db` — só por `prisma` bruto nas rotas `/platform/usuarios` e `/users`.
+  Ver `backend/test/no-raw-prisma.test.ts` para a lista de arquivos que podem importar `prisma` bruto.
+- **Vincular um `platform_admin`** por `PUT /platform/usuarios/:id/empresas/:empresaId` responde **404** (não
+  400): a lista de usuários vinculáveis da plataforma já exclui `platform_admin`, então o id simplesmente não é
+  encontrado — o trigger do banco (`usuario_empresas_sem_platform_admin`) nunca chega a ser exercitado por essa
+  rota.
+- `backend/scripts/check-isolamento.sql` passou a ter 7 checagens: a checagem 6 agora é "platform_admin com
+  vínculo" (zero linhas esperadas); a antiga "velório criado por usuário de outra empresa" foi removida (deixou
+  de fazer sentido — a autoria de um velório não muda com o vínculo do usuário).
+- Teste final do backend: **237 testes**, todos passando.
+- **Implantação (2026-09-26):** backup `campax-20260926-1531.dump`; `restore-check.sh` com contagens idênticas;
+  `003_usuario_empresas.sql` em `campax` — `NOTICE: 003: 5 vínculos criados`; `check-isolamento.sql` com 0
+  problemas em todas as 7 checagens; todos os usuários existentes mantiveram exatamente uma empresa. Não há
+  script de reversão (down): rollback é restaurar esse backup com `pg_restore` e implantar o commit anterior.
+  Verificação em navegador (Playwright) dos 6 cenários do roteiro passou em `campax_dev`.
+- **Decisões da revisão final:** "Trocar empresa" aparece só no endereço geral (não no subdomínio, onde a
+  empresa já é fixa pelo host); "Remover da empresa" em `/admin/usuarios` só é oferecido a usuários
+  compartilhados (com outra empresa), como no desenho da spec; a migração foi verificada rodando em
+  `campax_dev` em vez de um teste Vitest (ver acima); vincular um `platform_admin` pela API responde 404 (ver
+  acima).
+- **Pendências conhecidas:** vínculos criados por um superadmin pela aba "Usuários" da empresa (não pela
+  plataforma) ficam com `created_by` `NULL`; as páginas da plataforma chamam `mutateAsync` sem `try/catch` (o
+  toast de erro aparece, mas a promise rejeitada não é tratada); desvincular pela página de usuário da
+  plataforma não tem confirmação; um usuário cuja empresa ativa foi suspensa precisa logar de novo para escolher
+  outra; a regra do último superadmin ativo (U8) é "conferir depois atualizar" — não é atômica.
 
 ## Fora de escopo
 
