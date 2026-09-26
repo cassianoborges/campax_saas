@@ -14,6 +14,7 @@ npm run dev          # Start Vite dev server on port 8080
 npm run build        # Production build (output: dist/)
 npm run lint         # ESLint
 npm run preview      # Preview production build
+npm test             # Vitest (pure functions and static renders; node environment, TZ=America/Sao_Paulo)
 ```
 
 ### backend (main API)
@@ -81,7 +82,7 @@ Admin → React Frontend → backend (Express/Prisma API, JWT auth) → local Po
 Lives in a local PostgreSQL 17 instance (`campax` DB) on this VPS, modeled in `backend/prisma/schema.prisma` (introspected from the DB with `prisma db pull`, then hand-adjusted — see comments in that file). Key tables:
 
 - **cameras** — `id`, `nome`, `rtsp_url`, `ativo`, `mediamtx_path` (set by sync service)
-- **velorios** — `nome_falecido`, `token_acesso` (6 chars, unique), `status` (Agendado/Ao Vivo/Encerrado — informational only; the UI actually derives live status from `data_inicio`/`data_fim`, see `getVelorioStatus` in `useVelorios.ts`), `sala_velorio_id` (FK to `sala_velorio`)
+- **velorios** — `nome_falecido`, `token_acesso` (6 chars, unique), `status` (Agendado/Ao Vivo/Encerrado — informational only; the UI actually derives live status from `data_inicio`/`data_fim`, see `getVelorioStatus` in `useVelorios.ts`), `sala_velorio_id` (FK to `sala_velorio`), `familiares` (free text for the death notice, ≤ 400 chars, left out of public responses)
 - **sala_velorio** / **sala_velorio_cameras** — a physical velório room and its assigned cameras; a `velorio` belongs to one `sala_velorio`
 - **empresas** — one row per funeral home (tenant): `nome_exibicao`, `slug` (MediaMTX path prefix, future subdomain), `hash_publico` (prefix of public per-sala links), branding (`logo_url`, `cor_primaria`, `cor_secundaria`), `ativo`; `nome` is the nome fantasia, plus optional registration data (`cnpj`, `telefone`, `endereco_*` with CEP stored as `00000-000` and UF validated) shown only in `/platform`. `cameras`, `sala_velorio`, `velorios`, `velorio_access_logs`, `terms_acceptances` have `empresa_id NOT NULL`; `homenagens_templates.empresa_id` NULL = global template; child tables (`velorio_cameras`, `sala_velorio_cameras`, `velorio_homenagens`, `velorio_visitantes`) inherit through their parent. Composite FKs keep velório↔sala and access log↔velório in the same empresa. Multi-empresa work is on branch `feat/multiempresa`, specs in `docs/multiempresa/`.
 - **profiles** — admin/staff accounts: `email` (globally unique), `password_hash` (bcrypt), `role` (platform_admin/superadmin/admin/operador/viewer — the same in every empresa of the user), `is_active`, `senha_alterada_em`. Empresas come from **usuario_empresas** (`profile_id`, `empresa_id`, `created_by`): zero, one or several per user; `platform_admin` never has one (triggers from `003_usuario_empresas.sql`). Only the platform links/unlinks (`/platform/usuarios`, spec 10). This is the only user table — there is no separate `auth.users` schema. `platform_admin` is created only via `npm run create-platform-admin -- --email ...`.
@@ -127,6 +128,7 @@ Admins log in with email/password (`POST /auth/login`) and get a JWT (`jsonwebto
 - `src/components/ui/` — shadcn/ui components (do not edit)
 - `src/lib/apiClient.ts` — thin fetch wrapper for the `backend/` REST API (JWT bearer token, base URL from `VITE_API_URL`)
 - `src/lib/socket.ts` — Socket.IO client singleton (presence counts, live homenagem updates)
+- `src/components/nota-falecimento/` — death notice ("Nota de falecimento" button in `/admin/velorios`): templates registered in `modelos.ts` (each a 1080×1350 component taking `dados` + `densidade`), `NotaFalecimentoDialog` (form, preview, picks the first density that fits, exports a PNG). Data in `src/lib/notaFalecimento.ts`, PNG/share in `src/lib/imagemNota.ts`. Spec: `docs/superpowers/specs/2026-09-26-nota-falecimento-design.md`
 - Branding: public pages call `useBranding(empresa)` (`src/hooks/useBranding.ts` + `src/lib/branding.ts`), which overrides the `--gold*`/`--navy*` CSS tokens with the funerária's `cor_primaria`/`cor_secundaria` while mounted (text color picked by contrast; `--gold-foreground` is the text on gold buttons) and removes them on unmount; `<EmpresaLogo>` falls back to the Campax logo. The admin panel shows the empresa's logo/name but keeps Campax colors. `useAuth()` exposes `empresa` (from `/auth/me`) and `isPlatformAdmin`; `ProtectedRoute` takes `scope="empresa" | "platform"`.
 
 `@/` maps to `./src/` (configured in `tsconfig.json` and `vite.config.ts`).

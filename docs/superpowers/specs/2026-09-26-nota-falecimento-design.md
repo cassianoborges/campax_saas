@@ -171,3 +171,25 @@ Sem foto: cada modelo tem uma variação sem a área da foto, com o nome em dest
 - No celular, "Compartilhar" abre o menu do sistema com a imagem; no computador, "Baixar PNG" baixa o arquivo.
 - Sem foto ou sem logo, a nota continua bonita e completa (sem espaços vazios, sem logo da Campax).
 - Todos os testes do backend e do frontend passam.
+
+## Notas da implementação (2026-09-26)
+
+- No ar em 2026-09-26: coluna `velorios.familiares` aplicada em produção (backup `campax-20260926-2200.dump`),
+  backend e frontend publicados. Plano: `docs/superpowers/plans/2026-09-26-nota-falecimento.md`.
+- **Mudou em relação à spec — densidade medida:** cada modelo tem 3 níveis de densidade (tamanhos em
+  `MEDIDAS`, `estilos.ts`); o diálogo renderiza o modelo fora da tela nos 3 níveis e usa o primeiro que cabe em
+  1350 px (`escolherDensidade`), na prévia e na exportação. Uma regra por contagem de caracteres cortava o
+  rodapé/logo em notas comuns (~100 caracteres de familiares com sepultamento e transmissão), achado na revisão
+  final. Foto, logo, ornamentos e rodapé nunca encolhem (`flexShrink: 0`).
+- Nota curta: o miolo fica centralizado entre cabeçalho e rodapé (`Miolo`), sem vão.
+- Um segundo "Salvar e gerar" após enviar foto usa a foto nova (estado `fotoSalvaUrl`; a prop `velorio` é um
+  retrato da lista).
+- Verificado em Chrome headless contra `campax_dev`: os 3 modelos com e sem foto/logo, texto curto e máximo,
+  mais 12 casos intermediários × 3 modelos medidos (todos cabem); PNG 1080×1350.
+- **Pendente (manual, com o usuário):** compartilhar pelo celular (Android e iPhone) e conferir com uma logo
+  real de funerária — a logo de teste (Campax, azul) fica apagada no fundo escuro do Clássico/Moderno; logos
+  escuras podem precisar de versão clara.
+- Pendências menores (não feitas): toast "Velório atualizado" a cada geração; mensagem de tipo inválido em
+  `familiares` repete a de 400 caracteres; `aria-pressed` nos botões de modelo e `aria-describedby` no contador;
+  sem opção de tirar a foto existente da nota; `html-to-image` embute todos os subconjuntos de fonte a cada
+  exportação (lento no celular).
