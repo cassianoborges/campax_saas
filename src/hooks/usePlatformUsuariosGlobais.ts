@@ -44,7 +44,11 @@ export function useCreateUsuarioGlobal() {
     return useMutation({
         mutationFn: async (input: { email: string; password: string; role: TenantRole; full_name?: string; empresa_ids: string[] }) =>
             (await apiClient.post<{ data: UsuarioGlobal }>('/platform/usuarios', input)).data,
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: KEY }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: KEY });
+            // Link counts in the empresa pages ("Usuários" tab, usage numbers) change too.
+            queryClient.invalidateQueries({ queryKey: ['platform', 'empresas'] });
+        },
         onError: onError('Erro ao criar usuário'),
     });
 }
