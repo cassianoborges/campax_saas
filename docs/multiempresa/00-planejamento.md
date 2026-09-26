@@ -199,7 +199,7 @@ Cada fase vira uma spec em `docs/multiempresa/NN-<nome>.md`, e depois um plano d
 | F4 | `05-frontend-empresa-e-branding.md` | `EmpresaContext`, links dinâmicos, `SalaPublicLink` via API, branding nas páginas públicas e no admin, remover `VITE_EMPRESA_HASH` | F2 (F3 para editar o branding) |
 | F5 | `06-mediamtx-sync.md` | Caminhos com prefixo da empresa, unicidade, empresa suspensa | F1 |
 | F6 | `07-camera-status.md` | Checagem de câmera dentro do backend, com empresa; desligar camera-status-api | F2 |
-| F7 | `08-subdominio-dominio-proprio.md` | Identificar a empresa pelo host, CORS dinâmico, SSL (pós-MVP) | F4, Q6 |
+| F7 | `08-subdominio-dominio-proprio.md` | Identificar a empresa pelo host, CORS dinâmico, SSL (pós-MVP) — **no ar em 2026-09-26** | F4, Q6 |
 | F8 | `09-piloto.md` | Cadastrar a 2ª funerária, checklist de validação, monitoramento | F2–F6 |
 
 F5 e F6 podem andar em paralelo com F3/F4. **MVP = F0 a F6 + F8.** F7, limites por plano e cobrança ficam

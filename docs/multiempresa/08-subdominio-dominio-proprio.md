@@ -1,7 +1,7 @@
 # Spec 08 — F7: Subdomínio por funerária
 
 > Planejamento geral: [00-planejamento.md](00-planejamento.md) · Depende de: [04-plataforma.md](04-plataforma.md), [05-frontend-empresa-e-branding.md](05-frontend-empresa-e-branding.md), [06-mediamtx-sync.md](06-mediamtx-sync.md)
-> Status: **implementada em 2026-09-24** (código; sem DNS/certificado — Task 11, pendente com o usuário).
+> Status: **implementada em 2026-09-24; no ar desde 2026-09-26** (`senap.campax.com.br`, Task 11 concluída).
 
 ## Objetivo
 
@@ -168,6 +168,24 @@ O código segue o desenho; divergências e pendências:
   checagem de sala reservada repetida no POST e no PATCH; +2 avisos `no-explicit-any` em `public.ts`
   (idioma já usado no arquivo); lista de slugs reservados duplicada backend/frontend sem teste de paridade;
   `/velorio/:id` não é filtrado pela empresa do host (IDs são UUID e só chegam após o token).
+
+### Implantação (Task 11, 2026-09-25/26)
+
+- Slug da empresa inicial `campax` → **`senap`** (backup `campax-20260925-0229.dump`), `rotate-paths --apply`
+  (5 câmeras `senap-…`); `hash_publico` `d2788b07` mantido. Nome exibido "Senap" pelo `/platform` (primeiro
+  `platform_admin` criado nesse dia).
+- Cloudflare: registro `*` A → `2.29.41.124`, *DNS only*; token *Zone → DNS → Edit* só em `campax.com.br`,
+  guardado apenas no nginx-proxy-manager.
+- nginx-proxy-manager: certificado Let's Encrypt por desafio DNS — saiu só com `*.campax.com.br` (sem o
+  `campax.com.br` puro, que não é usado pelo subdomínio), válido até 25/12/2026, renovação automática; host
+  `*.campax.com.br` → `http://2.29.41.124:8080` com Force SSL, HTTP/2 e Websockets; HSTS deixado desligado.
+  Os hosts exatos (`app2`, `backend`, `media2`, `apicam`) continuam tendo prioridade.
+- Frontend: `VITE_BASE_DOMAIN="campax.com.br"`, build e restart.
+- **Critérios de aceite (2026-09-26): 1–8 ok.** 1–7 conferidos pelo usuário no navegador em
+  `senap.campax.com.br`, `naoexiste.campax.com.br`, `funeraria-piloto-teste.campax.com.br` (suspensa) e `app2`;
+  pelo backend também: `/public/empresas/slug/<inexistente>` → 404, token da Senap com `?empresa=` de outra
+  empresa → 404, login do `platform_admin` com `empresa_slug` → 401, CORS aceita `senap`/`app2` e recusa slug
+  inexistente ou suspenso. 8: backend 171 testes, mediamtx-sync 20.
 
 ## Fora de escopo
 

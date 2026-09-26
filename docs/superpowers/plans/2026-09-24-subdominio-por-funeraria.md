@@ -1337,9 +1337,9 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 Não é código; cada passo espera uma ação ou decisão do usuário. Não executar os passos 2–4 sem o novo slug confirmado por ele.
 
-- [ ] **Step 1: Usuário informa o novo slug** (nome real da funerária; `^[a-z0-9]+(-[a-z0-9]+)*$`, ≤ 40, fora de `RESERVED_SLUGS`) e confirma um horário sem velório ao vivo.
+- [x] **Step 1: Usuário informa o novo slug** (nome real da funerária; `^[a-z0-9]+(-[a-z0-9]+)*$`, ≤ 40, fora de `RESERVED_SLUGS`) e confirma um horário sem velório ao vivo.
 
-- [ ] **Step 2: Backup e troca**
+- [x] **Step 2: Backup e troca**
 
 ```bash
 /root/campax/scripts/backup-db.sh
@@ -1348,7 +1348,7 @@ psql "<DATABASE_URL de backend/.env, sem ?schema>" -c "UPDATE empresas SET slug 
 
 Expected: 1 linha, `hash_publico` inalterado (`d2788b07`).
 
-- [ ] **Step 3: Caminhos do MediaMTX**
+- [x] **Step 3: Caminhos do MediaMTX**
 
 ```bash
 cd /root/campax/mediamtx-sync && npm run rotate-paths
@@ -1356,13 +1356,13 @@ cd /root/campax/mediamtx-sync && npm run rotate-paths
 
 Conferir a lista (todas as câmeras `campax-…` → `<novo>-…`), depois `npm run rotate-paths -- --apply` e `curl -s -X POST http://127.0.0.1:3002/sync`. Abrir um velório de teste e ver a imagem.
 
-- [ ] **Step 4: Nome exibido** — usuário renomeia `nome`/`nome_exibicao` em `/platform/empresas/<id>`.
+- [x] **Step 4: Nome exibido** — usuário renomeia `nome`/`nome_exibicao` em `/platform/empresas/<id>`.
 
-- [ ] **Step 5: Cloudflare (usuário)** — token de API *Zone → DNS → Edit* só na zona `campax.com.br`; registro `*` A → `2.29.41.124`, *DNS only*. Verificar: `dig +short A teste123.campax.com.br` → `2.29.41.124`.
+- [x] **Step 5: Cloudflare (usuário)** — token de API *Zone → DNS → Edit* só na zona `campax.com.br`; registro `*` A → `2.29.41.124`, *DNS only*. Verificar: `dig +short A teste123.campax.com.br` → `2.29.41.124`.
 
-- [ ] **Step 6: nginx-proxy-manager** — certificado Let's Encrypt `*.campax.com.br` + `campax.com.br` por desafio DNS (Cloudflare, token colado direto na interface do NPM pelo usuário); host `*.campax.com.br` → `http://2.29.41.124:8080`, *Force SSL*, *HTTP/2*, *Websockets Support*.
+- [x] **Step 6: nginx-proxy-manager** — certificado Let's Encrypt `*.campax.com.br` + `campax.com.br` por desafio DNS (Cloudflare, token colado direto na interface do NPM pelo usuário); host `*.campax.com.br` → `http://2.29.41.124:8080`, *Force SSL*, *HTTP/2*, *Websockets Support*.
 
-- [ ] **Step 7: Critérios de aceite da spec (1–7)** em `https://<novo>.campax.com.br`, anotando o resultado na seção "Notas da implementação" da spec 08; marcar a linha de domínio do `CLAUDE.md` como ativa; commit.
+- [x] **Step 7: Critérios de aceite da spec (1–7)** em `https://<novo>.campax.com.br`, anotando o resultado na seção "Notas da implementação" da spec 08; marcar a linha de domínio do `CLAUDE.md` como ativa; commit.
 
 ---
 
