@@ -7,7 +7,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { AdminLayout } from '@/components/AdminLayout';
-import { useVelorios, getVelorioStatus } from '@/hooks/useVelorios';
+import { useVelorios, getVelorioStatus, Velorio } from '@/hooks/useVelorios';
+import { NotaFalecimentoDialog } from '@/components/nota-falecimento/NotaFalecimentoDialog';
 import { useSalasVelorio } from '@/hooks/useSalasVelorio';
 import { useHomenagensTemplates } from '@/hooks/useHomenagensTemplates';
 import { useAuth } from '@/hooks/useAuth';
@@ -33,6 +34,7 @@ import {
   Download,
   CheckCircle2,
   Share2,
+  FileImage,
   Calendar,
   Camera,
   AlertTriangle,
@@ -251,6 +253,7 @@ const VelorioManagement = () => {
   const [editingVelorioId, setEditingVelorioId] = useState<string | null>(null);
   const [homenagensTarget, setHomenagensTarget] = useState<{ id: string; nome: string } | null>(null);
   const [presencaTarget, setPresencaTarget] = useState<{ id: string; nome: string } | null>(null);
+  const [notaTarget, setNotaTarget] = useState<Velorio | null>(null);
   const [shareTarget, setShareTarget] = useState<{ nome: string; token: string } | null>(null);
   const [createdVelorioName, setCreatedVelorioName] = useState('');
   const [formData, setFormData] = useState<VelorioFormData>({
@@ -852,6 +855,11 @@ const VelorioManagement = () => {
                         <UserCheck className="w-4 h-4" />
                       </Button>
                       {isOperador && (
+                        <Button variant="ghost" size="icon" title="Nota de falecimento" onClick={() => setNotaTarget(velorio)}>
+                          <FileImage className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {isOperador && (
                         <Button variant="ghost" size="icon" onClick={() => openEditDialog(velorio)}>
                           <Pencil className="w-4 h-4" />
                         </Button>
@@ -881,6 +889,10 @@ const VelorioManagement = () => {
           <PresencaDialog velorio_id={presencaTarget.id} velorio_nome={presencaTarget.nome} />
         )}
       </Dialog>
+
+      {notaTarget && (
+        <NotaFalecimentoDialog velorio={notaTarget} open={!!notaTarget} onOpenChange={(open) => { if (!open) setNotaTarget(null); }} />
+      )}
 
       <Dialog open={!!shareTarget} onOpenChange={(open) => { if (!open) setShareTarget(null); }}>
         {shareTarget && (

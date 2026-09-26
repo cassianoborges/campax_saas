@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { NotaFalecimentoDados, tamanhoFamiliares } from '@/lib/notaFalecimento';
 import { SERIF } from './estilos';
 
@@ -39,23 +40,23 @@ export function Familiares({ dados, cor }: { dados: NotaFalecimentoDados; cor: s
   );
 }
 
-function Bloco({ titulo, linhas, corTitulo, corTexto }: { titulo: string; linhas: string[]; corTitulo: string; corTexto: string }) {
+function Bloco({ titulo, linhas, corTitulo, corTexto, compacta }: { titulo: string; linhas: string[]; corTitulo: string; corTexto: string; compacta: boolean }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <div style={{ fontSize: 22, letterSpacing: 4, textTransform: 'uppercase', color: corTitulo, fontWeight: 600 }}>{titulo}</div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: compacta ? 2 : 6 }}>
+      <div style={{ fontSize: compacta ? 20 : 22, letterSpacing: 4, textTransform: 'uppercase', color: corTitulo, fontWeight: 600 }}>{titulo}</div>
       {linhas.map((linha) => (
-        <div key={linha} style={{ fontSize: 30, color: corTexto }}>{linha}</div>
+        <div key={linha} style={{ fontSize: compacta ? 27 : 30, color: corTexto }}>{linha}</div>
       ))}
     </div>
   );
 }
 
 /** Velório, sepultamento and (optionally) the live stream, each as a titled block. */
-export function Informacoes({ dados, corTitulo, corTexto }: { dados: NotaFalecimentoDados; corTitulo: string; corTexto: string }) {
+export function Informacoes({ dados, corTitulo, corTexto, compacta = false }: { dados: NotaFalecimentoDados; corTitulo: string; corTexto: string; compacta?: boolean }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 26 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: compacta ? 14 : 26 }}>
       {dados.velorio && (
-        <Bloco titulo="Velório" linhas={[dados.velorio.sala, dados.velorio.quando].filter(Boolean)} corTitulo={corTitulo} corTexto={corTexto} />
+        <Bloco titulo="Velório" linhas={[dados.velorio.sala, dados.velorio.quando].filter(Boolean)} corTitulo={corTitulo} corTexto={corTexto} compacta={compacta} />
       )}
       {dados.sepultamento && (
         <Bloco
@@ -63,6 +64,7 @@ export function Informacoes({ dados, corTitulo, corTexto }: { dados: NotaFalecim
           linhas={[dados.sepultamento.quando, dados.sepultamento.local].filter((l): l is string => !!l)}
           corTitulo={corTitulo}
           corTexto={corTexto}
+          compacta={compacta}
         />
       )}
       {dados.transmissao && (
@@ -71,6 +73,7 @@ export function Informacoes({ dados, corTitulo, corTexto }: { dados: NotaFalecim
           linhas={[`${dados.transmissao.endereco} · código ${dados.transmissao.codigo}`]}
           corTitulo={corTitulo}
           corTexto={corTexto}
+          compacta={compacta}
         />
       )}
     </div>
@@ -85,4 +88,17 @@ export function Rodape({ dados, cor }: { dados: NotaFalecimentoDados; cor: strin
 /** Thin horizontal rule. */
 export function Filete({ cor, largura = 160 }: { cor: string; largura?: number }) {
   return <div style={{ width: largura, height: 3, background: cor, borderRadius: 2 }} />;
+}
+
+/**
+ * The notice's body: takes the free height between header and footer and centers its content, so a short
+ * notice has no gap before the footer. Default min-height (auto): a long body grows instead of being
+ * clipped at the top.
+ */
+export function Miolo({ gap, children }: { gap: number; children: ReactNode }) {
+  return (
+    <div data-miolo="" style={{ flex: 1, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap }}>
+      {children}
+    </div>
+  );
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  COR_PRIMARIA_PADRAO, COR_SECUNDARIA_PADRAO, montarNota, nomeArquivoNota, NotaEmpresa, NotaVelorio,
+  COR_PRIMARIA_PADRAO, COR_SECUNDARIA_PADRAO, montarNota, nomeArquivoNota, notaCompacta, NotaEmpresa, NotaVelorio,
   tamanhoFamiliares, tamanhoNome,
 } from './notaFalecimento';
 
@@ -104,5 +104,22 @@ describe('tamanhos e nome do arquivo', () => {
   it('nome do arquivo sem acentos nem espaços', () => {
     expect(nomeArquivoNota('José da Silva Júnior')).toBe('nota-falecimento-jose-da-silva-junior.png');
     expect(nomeArquivoNota('  ')).toBe('nota-falecimento.png');
+  });
+});
+
+describe('notaCompacta', () => {
+  it('nota com pouco texto não é compacta', () => {
+    expect(notaCompacta(montarNota(velorio, empresa, opcoes))).toBe(false);
+    expect(notaCompacta(montarNota(velorio, empresa, { ...opcoes, incluirTransmissao: true }))).toBe(false);
+  });
+
+  it('familiares longos deixam a nota compacta', () => {
+    expect(notaCompacta(montarNota({ ...velorio, familiares: 'a'.repeat(200) }, empresa, opcoes))).toBe(true);
+  });
+
+  it('familiares médios com sepultamento e transmissão deixam a nota compacta', () => {
+    const cheia = montarNota({ ...velorio, familiares: 'a'.repeat(120) }, empresa, { ...opcoes, incluirTransmissao: true });
+    expect(notaCompacta(cheia)).toBe(true);
+    expect(notaCompacta({ ...cheia, sepultamento: null })).toBe(false);
   });
 });

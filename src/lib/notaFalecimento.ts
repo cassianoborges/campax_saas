@@ -117,6 +117,16 @@ export function montarNota(velorio: NotaVelorio, empresa: NotaEmpresa, opcoes: N
   };
 }
 
+/**
+ * A "full" notice (long family text, or family text plus burial plus live stream) doesn't fit 1350 px with
+ * the regular sizes: the templates then use a smaller photo and tighter spacing.
+ */
+export function notaCompacta(dados: NotaFalecimentoDados): boolean {
+  const familiares = dados.familiares?.length ?? 0;
+  if (familiares >= 200) return true;
+  return familiares >= 100 && !!dados.sepultamento && !!dados.transmissao;
+}
+
 /** Font size (px) of the deceased's name, so long names still fit in two lines. */
 export function tamanhoNome(nome: string): number {
   const n = nome.trim().length;

@@ -1,7 +1,7 @@
-import { tamanhoNome } from '@/lib/notaFalecimento';
+import { notaCompacta, tamanhoNome } from '@/lib/notaFalecimento';
 import type { ModeloProps } from './modelos';
 import { raiz, SERIF } from './estilos';
-import { Chamada, Datas, Familiares, Informacoes, LogoOuNome, Rodape } from './partes';
+import { Chamada, Datas, Familiares, Informacoes, LogoOuNome, Miolo, Rodape } from './partes';
 
 const FUNDO = '#FAF7F2';
 const TEXTO = '#1F2937';
@@ -21,23 +21,23 @@ function Ramos({ cor, invertido = false }: { cor: string; invertido?: boolean })
 /** Light background, dark text, thin-framed photo, olive branches. */
 export function ModeloSereno({ dados }: ModeloProps) {
   const { corPrimaria } = dados.empresa;
-  const semFoto = !dados.fotoUrl;
+  const compacta = notaCompacta(dados);
   return (
-    <div style={{ ...raiz, background: FUNDO, color: TEXTO, padding: '56px 90px', gap: 24, justifyContent: semFoto ? 'center' : 'flex-start' }}>
-      <LogoOuNome empresa={dados.empresa} cor={corPrimaria} altura={100} />
+    <div style={{ ...raiz, background: FUNDO, color: TEXTO, padding: compacta ? '44px 90px 40px' : '56px 90px 48px', gap: compacta ? 16 : 24 }}>
+      <LogoOuNome empresa={dados.empresa} cor={corPrimaria} altura={compacta ? 80 : 100} />
       <Ramos cor={corPrimaria} />
-      <Chamada cor={corPrimaria} />
-      {dados.fotoUrl && (
-        <img src={dados.fotoUrl} alt="" style={{ width: 300, height: 360, objectFit: 'cover', borderRadius: 16, border: `3px solid ${corPrimaria}`, padding: 8, background: '#fff' }} />
-      )}
-      <div style={{ fontFamily: SERIF, fontSize: tamanhoNome(dados.nome) * (semFoto ? 1.2 : 1), fontWeight: 500, lineHeight: 1.1 }}>{dados.nome}</div>
-      <Datas dados={dados} cor={TEXTO} />
-      <Familiares dados={dados} cor={TEXTO} />
-      <Informacoes dados={dados} corTitulo={corPrimaria} corTexto={TEXTO} />
-      <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-        <Ramos cor={corPrimaria} invertido />
-        <Rodape dados={dados} cor={TEXTO} />
-      </div>
+      <Miolo gap={compacta ? 16 : 24}>
+        <Chamada cor={corPrimaria} />
+        {dados.fotoUrl && (
+          <img src={dados.fotoUrl} alt="" style={{ width: compacta ? 220 : 300, height: compacta ? 264 : 360, flexShrink: 0, objectFit: 'cover', borderRadius: 16, border: `3px solid ${corPrimaria}`, padding: 8, background: '#fff' }} />
+        )}
+        <div style={{ fontFamily: SERIF, fontSize: tamanhoNome(dados.nome) * (dados.fotoUrl ? 1 : 1.2), fontWeight: 500, lineHeight: 1.1 }}>{dados.nome}</div>
+        <Datas dados={dados} cor={TEXTO} />
+        <Familiares dados={dados} cor={TEXTO} />
+        <Informacoes dados={dados} corTitulo={corPrimaria} corTexto={TEXTO} compacta={compacta} />
+      </Miolo>
+      <Ramos cor={corPrimaria} invertido />
+      <Rodape dados={dados} cor={TEXTO} />
     </div>
   );
 }

@@ -50,6 +50,26 @@ describe.each(MODELOS_NOTA.map((m) => [m.id, m] as const))('modelo %s', (_id, mo
   });
 });
 
+describe.each(MODELOS_NOTA.map((m) => [m.id, m] as const))('modelo %s cheio', (_id, modelo) => {
+  it('foto nunca encolhe (não fica achatada quando o texto é longo)', () => {
+    const Modelo = modelo.componente;
+    const dados = montarNota({ ...velorio, familiares: 'a'.repeat(400) }, empresa, opcoes);
+    const html = renderToStaticMarkup(<Modelo dados={dados} />);
+    const foto = /<img src="data:image\/png;base64,FOTO"[^>]*>/.exec(html)![0];
+    expect(foto).toContain('flex-shrink:0');
+  });
+});
+
+describe.each(MODELOS_NOTA.map((m) => [m.id, m] as const))('modelo %s com pouco texto', (_id, modelo) => {
+  it('o miolo ocupa o espaço livre e fica centralizado (sem vão entre o conteúdo e o rodapé)', () => {
+    const Modelo = modelo.componente;
+    const dados = montarNota({ ...velorio, foto_falecido: null, familiares: 'Deixa filhos.' }, empresa, { ...opcoes, incluirTransmissao: false });
+    const html = renderToStaticMarkup(<Modelo dados={dados} />);
+    expect(html).toMatch(/<div data-miolo="" style="[^"]*flex:1[^"]*justify-content:center/);
+    expect(html).not.toContain('margin-top:auto');
+  });
+});
+
 describe('modeloPorId', () => {
   it('conhecido, desconhecido e null', () => {
     expect(modeloPorId('sereno').id).toBe('sereno');
