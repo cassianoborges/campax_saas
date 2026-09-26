@@ -28,8 +28,9 @@ import { empresaOrigin } from '@/lib/hostEmpresa';
 import { generatePassword } from '@/lib/generatePassword';
 import { ROLE_LABELS } from '@/lib/roleLabels';
 import { useToast } from '@/hooks/use-toast';
+import { usePlatformUsuariosGlobais } from '@/hooks/usePlatformUsuariosGlobais';
 import { CandleIcon } from '@/components/icons/MemorialIcons';
-import { AlertTriangle, ArrowLeft, KeyRound, Upload, Trash2, UserPlus, UserX, UserCheck } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, KeyRound, Link2, Upload, Trash2, UserPlus, UserX, UserCheck } from 'lucide-react';
 
 // The page background behind public cards (light theme --background).
 const FUNDO_CLARO = '#F5F6F8';
@@ -233,8 +234,12 @@ function IdentidadeTab({ empresa, hook }: { empresa: EmpresaPlataforma; hook: Re
 // ------------------------------------------------------------------------------------------------
 
 function UsuariosTab({ empresaId }: { empresaId: string }) {
-  const { data: usuarios = [], create, resetSenha, setAtivo } = usePlatformUsuarios(empresaId);
+  const { data: usuarios = [], create, resetSenha, setAtivo, vincularExistente } = usePlatformUsuarios(empresaId);
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const [busca, setBusca] = useState('');
+  const { data: encontrados = [] } = usePlatformUsuariosGlobais({ busca, empresaId: '' });
+  const candidatos = busca.trim().length >= 2 ? encontrados.filter((u) => !u.empresas.some((e) => e.id === empresaId)).slice(0, 8) : [];
   const [novo, setNovo] = useState({ full_name: '', email: '', role: 'admin' as TenantRole, password: generatePassword(12) });
   const [senhaGerada, setSenhaGerada] = useState<{ email: string; password: string } | null>(null);
 
@@ -252,6 +257,11 @@ function UsuariosTab({ empresaId }: { empresaId: string }) {
                   {u.email} · {ROLE_LABELS[u.role]}
                   {!u.is_active && ' · desativado'}
                 </p>
+                {u.outras_empresas > 0 && (
+                  <button type="button" className="text-xs text-gold hover:underline" onClick={() => navigate(`/platform/usuarios/${u.id}`)}>
+                    +{u.outras_empresas} {u.outras_empresas === 1 ? 'empresa' : 'empresas'}
+                  </button>
+                )}
               </div>
               <div className="flex gap-2">
                 <Button
@@ -299,6 +309,27 @@ function UsuariosTab({ empresaId }: { empresaId: string }) {
           </CardContent>
         </Card>
       )}
+
+      <Card className="shadow-soft">
+        <CardContent className="p-6 grid gap-3">
+          <h3 className="font-heading text-lg">Vincular usuário existente</h3>
+          <Input placeholder="Buscar por nome ou e-mail (mínimo 2 letras)" value={busca} onChange={(e) => setBusca(e.target.value)} />
+          {candidatos.map((u) => (
+            <div key={u.id} className="flex items-center gap-3 text-sm">
+              <span className="flex-1 min-w-0 truncate">
+                {u.full_name || u.email} <span className="text-muted-foreground">· {u.email} · {ROLE_LABELS[u.role]}</span>
+              </span>
+              <Button variant="outline" size="sm" disabled={vincularExistente.isPending} onClick={() => vincularExistente.mutate(u.id)}>
+                <Link2 className="w-4 h-4 mr-2" />
+                Vincular
+              </Button>
+            </div>
+          ))}
+          {busca.trim().length >= 2 && candidatos.length === 0 && (
+            <p className="text-sm text-muted-foreground">Nenhum usuário encontrado fora desta empresa.</p>
+          )}
+        </CardContent>
+      </Card>
 
       <Card className="shadow-soft">
         <CardContent className="p-6 grid gap-4 sm:grid-cols-2">
