@@ -26,16 +26,10 @@ import { contrastRatio } from '@/lib/branding';
 import { TenantRole } from '@/hooks/useRole';
 import { empresaOrigin } from '@/lib/hostEmpresa';
 import { generatePassword } from '@/lib/generatePassword';
+import { ROLE_LABELS } from '@/lib/roleLabels';
 import { useToast } from '@/hooks/use-toast';
 import { CandleIcon } from '@/components/icons/MemorialIcons';
 import { AlertTriangle, ArrowLeft, KeyRound, Upload, Trash2, UserPlus, UserX, UserCheck } from 'lucide-react';
-
-const ROLE_LABELS: Record<TenantRole, string> = {
-  superadmin: 'Superadmin',
-  admin: 'Admin',
-  operador: 'Operador',
-  viewer: 'Visualizador',
-};
 
 // The page background behind public cards (light theme --background).
 const FUNDO_CLARO = '#F5F6F8';

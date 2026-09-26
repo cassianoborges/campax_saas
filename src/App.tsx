@@ -27,6 +27,9 @@ import PlatformEmpresas from "./pages/platform/PlatformEmpresas";
 import PlatformEmpresaNova from "./pages/platform/PlatformEmpresaNova";
 import PlatformEmpresaDetalhe from "./pages/platform/PlatformEmpresaDetalhe";
 import PlatformModelos from "./pages/platform/PlatformModelos";
+import PlatformUsuarios from "./pages/platform/PlatformUsuarios";
+import PlatformUsuarioNovo from "./pages/platform/PlatformUsuarioNovo";
+import PlatformUsuarioDetalhe from "./pages/platform/PlatformUsuarioDetalhe";
 
 const queryClient = new QueryClient();
 
@@ -75,6 +78,9 @@ const App = () => (
                 <Route path="/platform/empresas/nova" element={<ProtectedRoute scope="platform"><PlatformEmpresaNova /></ProtectedRoute>} />
                 <Route path="/platform/empresas/:id" element={<ProtectedRoute scope="platform"><PlatformEmpresaDetalhe /></ProtectedRoute>} />
                 <Route path="/platform/modelos-homenagem" element={<ProtectedRoute scope="platform"><PlatformModelos /></ProtectedRoute>} />
+                <Route path="/platform/usuarios" element={<ProtectedRoute scope="platform"><PlatformUsuarios /></ProtectedRoute>} />
+                <Route path="/platform/usuarios/novo" element={<ProtectedRoute scope="platform"><PlatformUsuarioNovo /></ProtectedRoute>} />
+                <Route path="/platform/usuarios/:id" element={<ProtectedRoute scope="platform"><PlatformUsuarioDetalhe /></ProtectedRoute>} />
               </>
             )}
 
