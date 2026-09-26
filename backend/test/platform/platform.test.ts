@@ -83,6 +83,39 @@ describe('empresas', () => {
     expect(res.status).toBe(400);
   });
 
+  it('telefone e endereço: criados, editados e devolvidos; CEP normalizado', async () => {
+    const endereco = {
+      telefone: '(11) 3333-4444', endereco_cep: '01310100', endereco_logradouro: 'Av. Paulista',
+      endereco_numero: '1000', endereco_complemento: 'Sala 1', endereco_bairro: 'Bela Vista',
+      endereco_cidade: 'São Paulo', endereco_uf: 'sp',
+    };
+    const criada = await request(app).post('/platform/empresas').set(plat()).send(novaEmpresa(endereco));
+    expect(criada.status).toBe(200);
+    criadas.push(criada.body.data.id);
+    expect(criada.body.data).toMatchObject({ ...endereco, endereco_cep: '01310-100', endereco_uf: 'SP' });
+
+    const editada = await request(app).patch(`/platform/empresas/${criada.body.data.id}`).set(plat())
+      .send({ endereco_cidade: 'Campinas', endereco_complemento: '', telefone: '  ' });
+    expect(editada.status).toBe(200);
+    expect(editada.body.data).toMatchObject({ endereco_cidade: 'Campinas', endereco_complemento: null, telefone: null, endereco_uf: 'SP' });
+  });
+
+  it('endereço não aparece na página pública', async () => {
+    await request(app).patch(`/platform/empresas/${f.A.empresa.id}`).set(plat()).send({ endereco_cidade: 'Campinas', telefone: '1133334444' });
+    const res = await request(app).get(`/public/velorios/${f.A.velorio.token_acesso}`);
+    expect(res.status).toBe(200);
+    expect(JSON.stringify(res.body)).not.toContain('Campinas');
+    expect(JSON.stringify(res.body)).not.toContain('1133334444');
+  });
+
+  it.each([
+    ['UF inexistente', { endereco_uf: 'XX' }],
+    ['CEP com poucos dígitos', { endereco_cep: '1234' }],
+  ])('%s → 400', async (_nome, campos) => {
+    const res = await request(app).patch(`/platform/empresas/${f.A.empresa.id}`).set(plat()).send(campos);
+    expect(res.status).toBe(400);
+  });
+
   it('PATCH não altera slug nem hash_publico (P1)', async () => {
     const res = await request(app)
       .patch(`/platform/empresas/${f.A.empresa.id}`)

@@ -14,7 +14,17 @@ export interface EmpresaUso {
     acessos_30d: number;
 }
 
-export interface EmpresaPlataforma {
+export interface EmpresaEndereco {
+    endereco_cep: string | null;
+    endereco_logradouro: string | null;
+    endereco_numero: string | null;
+    endereco_complemento: string | null;
+    endereco_bairro: string | null;
+    endereco_cidade: string | null;
+    endereco_uf: string | null;
+}
+
+export interface EmpresaPlataforma extends EmpresaEndereco {
     id: string;
     nome: string;
     nome_exibicao: string;
@@ -26,13 +36,15 @@ export interface EmpresaPlataforma {
     cor_secundaria: string | null;
     whatsapp_contato: string | null;
     email_contato: string | null;
+    telefone: string | null;
     ativo: boolean;
     created_at: string;
     uso: EmpresaUso;
 }
 
 export type EmpresaEditavel = Partial<
-    Pick<EmpresaPlataforma, 'nome' | 'nome_exibicao' | 'cnpj' | 'whatsapp_contato' | 'email_contato' | 'cor_primaria' | 'cor_secundaria'>
+    Pick<EmpresaPlataforma, 'nome' | 'nome_exibicao' | 'cnpj' | 'whatsapp_contato' | 'email_contato' | 'telefone' | 'cor_primaria' | 'cor_secundaria'> &
+        EmpresaEndereco
 >;
 
 export interface NovaEmpresaInput {

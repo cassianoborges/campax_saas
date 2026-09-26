@@ -23,10 +23,18 @@ const MIN_PASSWORD_LENGTH = 8;
 const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const COR_RE = /^#[0-9a-fA-F]{6}$/;
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+const UFS = new Set(['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO']);
 
 // slug and hash_publico are immutable after creation (P1): the hash is in printed links/QR codes,
 // the slug in MediaMTX paths and (later) subdomains.
-const EMPRESA_EDITABLE = ['nome', 'nome_exibicao', 'cnpj', 'whatsapp_contato', 'email_contato', 'cor_primaria', 'cor_secundaria'] as const;
+const EMPRESA_EDITABLE = [
+  'nome', 'nome_exibicao', 'cnpj', 'whatsapp_contato', 'email_contato', 'cor_primaria', 'cor_secundaria', 'telefone',
+  'endereco_cep', 'endereco_logradouro', 'endereco_numero', 'endereco_complemento', 'endereco_bairro', 'endereco_cidade', 'endereco_uf',
+] as const;
+// Optional free-text fields: trimmed, blank → null.
+const EMPRESA_OPCIONAIS = [
+  'telefone', 'endereco_cep', 'endereco_logradouro', 'endereco_numero', 'endereco_complemento', 'endereco_bairro', 'endereco_cidade', 'endereco_uf',
+] as const;
 
 // Never generate a hash equal to a first-level frontend route (/admin/x, /platform/x, /velorio/x).
 const RESERVED_HASHES = new Set(['admin', 'platform', 'velorio']);
@@ -75,6 +83,20 @@ function validateEmpresaFields(fields: Partial<Record<(typeof EMPRESA_EDITABLE)[
     if (key in fields && !String(fields[key] ?? '').trim()) return `O campo ${key} é obrigatório`;
   }
   if (fields.email_contato && !EMAIL_RE.test(fields.email_contato)) return 'E-mail de contato inválido';
+  for (const key of EMPRESA_OPCIONAIS) {
+    if (!(key in fields)) continue;
+    const value = fields[key] == null ? '' : String(fields[key]).trim();
+    fields[key] = value || null;
+  }
+  if (fields.endereco_cep) {
+    const digitos = fields.endereco_cep.replace(/\D/g, '');
+    if (digitos.length !== 8) return 'CEP inválido: use 8 dígitos';
+    fields.endereco_cep = `${digitos.slice(0, 5)}-${digitos.slice(5)}`;
+  }
+  if (fields.endereco_uf) {
+    fields.endereco_uf = fields.endereco_uf.toUpperCase();
+    if (!UFS.has(fields.endereco_uf)) return 'UF inválida';
+  }
   return null;
 }
 

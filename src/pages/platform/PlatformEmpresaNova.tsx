@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { EmpresaEnderecoFields } from '@/components/EmpresaEnderecoFields';
+import { enderecoForm, enderecoParaApi } from '@/lib/empresaEndereco';
 import { Card, CardContent } from '@/components/ui/card';
 import { PlatformLayout } from '@/components/PlatformLayout';
 import { useCreateEmpresa, EmpresaPlataforma } from '@/hooks/usePlatform';
@@ -57,7 +59,8 @@ function CopyLine({ label, value }: { label: string; value: string }) {
 const PlatformEmpresaNova = () => {
   const navigate = useNavigate();
   const createEmpresa = useCreateEmpresa();
-  const [empresa, setEmpresa] = useState({ nome: '', nome_exibicao: '', slug: '', cnpj: '', whatsapp_contato: '', email_contato: '' });
+  const [empresa, setEmpresa] = useState({ nome: '', nome_exibicao: '', slug: '', cnpj: '', whatsapp_contato: '', email_contato: '', telefone: '' });
+  const [endereco, setEndereco] = useState(() => enderecoForm());
   const [slugEditado, setSlugEditado] = useState(false);
   const [superadmin, setSuperadmin] = useState({ full_name: '', email: '', password: generatePassword(12) });
   const [criada, setCriada] = useState<EmpresaPlataforma | null>(null);
@@ -83,6 +86,8 @@ const PlatformEmpresaNova = () => {
         cnpj: clean(empresa.cnpj),
         whatsapp_contato: clean(empresa.whatsapp_contato),
         email_contato: clean(empresa.email_contato),
+        telefone: clean(empresa.telefone),
+        ...enderecoParaApi(endereco),
       },
       superadmin: { email: superadmin.email.trim(), password: superadmin.password, full_name: clean(superadmin.full_name) },
     });
@@ -130,7 +135,7 @@ const PlatformEmpresaNova = () => {
         <Card className="shadow-soft">
           <CardContent className="p-6 grid gap-4 sm:grid-cols-2">
             <h2 className="font-heading text-lg sm:col-span-2">Empresa</h2>
-            <Field label="Nome (razão social ou fantasia) *">
+            <Field label="Nome fantasia *">
               <Input value={empresa.nome} onChange={(e) => setNome(e.target.value)} required />
             </Field>
             <Field label="Nome de exibição *" hint="Aparece nas páginas públicas e no painel da funerária">
@@ -155,6 +160,10 @@ const PlatformEmpresaNova = () => {
             <Field label="E-mail de contato">
               <Input type="email" value={empresa.email_contato} onChange={(e) => setEmpresa({ ...empresa, email_contato: e.target.value })} />
             </Field>
+            <Field label="Telefone">
+              <Input type="tel" value={empresa.telefone} onChange={(e) => setEmpresa({ ...empresa, telefone: e.target.value })} />
+            </Field>
+            <EmpresaEnderecoFields value={endereco} onChange={setEndereco} />
           </CardContent>
         </Card>
 

@@ -18,6 +18,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { PlatformLayout, StatusBadge } from '@/components/PlatformLayout';
 import { EmpresaLogo } from '@/components/EmpresaLogo';
+import { EmpresaEnderecoFields } from '@/components/EmpresaEnderecoFields';
+import { enderecoForm, enderecoParaApi } from '@/lib/empresaEndereco';
 import { usePlatformEmpresa, usePlatformUsuarios, EmpresaPlataforma } from '@/hooks/usePlatform';
 import { useBranding } from '@/hooks/useBranding';
 import { contrastRatio } from '@/lib/branding';
@@ -58,17 +60,21 @@ function DadosTab({ empresa, onSave, saving }: { empresa: EmpresaPlataforma; onS
     cnpj: empresa.cnpj ?? '',
     whatsapp_contato: empresa.whatsapp_contato ?? '',
     email_contato: empresa.email_contato ?? '',
+    telefone: empresa.telefone ?? '',
   });
+  const [endereco, setEndereco] = useState(() => enderecoForm(empresa));
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, [key]: e.target.value });
 
   return (
     <Card className="shadow-soft max-w-3xl">
       <CardContent className="p-6 grid gap-4 sm:grid-cols-2">
-        <Field label="Nome *"><Input value={form.nome} onChange={set('nome')} /></Field>
+        <Field label="Nome fantasia *"><Input value={form.nome} onChange={set('nome')} /></Field>
         <Field label="Nome de exibição *"><Input value={form.nome_exibicao} onChange={set('nome_exibicao')} /></Field>
         <Field label="CNPJ"><Input value={form.cnpj} onChange={set('cnpj')} /></Field>
         <Field label="WhatsApp de contato"><Input value={form.whatsapp_contato} onChange={set('whatsapp_contato')} /></Field>
         <Field label="E-mail de contato"><Input type="email" value={form.email_contato} onChange={set('email_contato')} /></Field>
+        <Field label="Telefone"><Input type="tel" value={form.telefone} onChange={set('telefone')} /></Field>
+        <EmpresaEnderecoFields value={endereco} onChange={setEndereco} />
         <div className="hidden sm:block" />
         <Field label="Slug" hint="Usado no endereço da funerária e nos das câmeras; não pode ser alterado.">
           <Input value={empresa.slug} disabled />
@@ -92,6 +98,8 @@ function DadosTab({ empresa, onSave, saving }: { empresa: EmpresaPlataforma; onS
                 cnpj: form.cnpj.trim() || null,
                 whatsapp_contato: form.whatsapp_contato.trim() || null,
                 email_contato: form.email_contato.trim() || null,
+                telefone: form.telefone.trim() || null,
+                ...enderecoParaApi(endereco),
               })
             }
           >
@@ -370,7 +378,12 @@ const PlatformEmpresaDetalhe = () => {
 
   // Keep the Dados form in sync after a save (it's keyed on updated values below).
   const [formKey, setFormKey] = useState(0);
-  useEffect(() => setFormKey((k) => k + 1), [empresa?.nome, empresa?.nome_exibicao, empresa?.cnpj, empresa?.whatsapp_contato, empresa?.email_contato]);
+  // Remount DadosTab when the saved data changes (e.g. the backend normalized the CEP/UF).
+  const dadosVersao = empresa && JSON.stringify([
+    empresa.nome, empresa.nome_exibicao, empresa.cnpj, empresa.whatsapp_contato, empresa.email_contato, empresa.telefone,
+    enderecoForm(empresa),
+  ]);
+  useEffect(() => setFormKey((k) => k + 1), [dadosVersao]);
 
   if (isLoading || !empresa) {
     return (
