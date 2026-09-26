@@ -9,8 +9,10 @@ beforeEach(() => resetDb());
 afterAll(() => prisma.$disconnect());
 
 describe('resolverEmpresaAtiva', () => {
-  const A = { id: 'a' } as any;
-  const B = { id: 'b' } as any;
+  const A = { id: 'a', ativo: true } as any;
+  const B = { id: 'b', ativo: true } as any;
+  const Bsuspensa = { id: 'b', ativo: false } as any;
+  const Asuspensa = { id: 'a', ativo: false } as any;
   it.each([
     ['um vínculo, sem emp', [A], undefined, { tipo: 'empresa', empresa: A }],
     ['vários, sem emp', [A, B], undefined, { tipo: 'provisorio' }],
@@ -18,6 +20,9 @@ describe('resolverEmpresaAtiva', () => {
     ['emp com vínculo', [A, B], 'b', { tipo: 'empresa', empresa: B }],
     ['emp sem vínculo', [A], 'b', { tipo: 'sem-acesso' }],
     ['emp e nenhum vínculo', [], 'a', { tipo: 'sem-acesso' }],
+    ['emp suspensa, outra ativa', [A, Bsuspensa], 'b', { tipo: 'provisorio' }],
+    ['emp suspensa, nenhuma outra ativa', [Asuspensa, Bsuspensa], 'b', { tipo: 'empresa', empresa: Bsuspensa }],
+    ['um vínculo suspenso, sem emp', [Asuspensa], undefined, { tipo: 'empresa', empresa: Asuspensa }],
   ])('%s', (_nome, empresas, emp, esperado) => {
     expect(resolverEmpresaAtiva(empresas.map((empresa) => ({ empresa })), emp)).toEqual(esperado);
   });
@@ -43,6 +48,35 @@ describe('requireAuth com vínculos', () => {
     await vincular(user.id, b.id);
     expect((await request(app).get('/auth/me').set(authHeader(user))).status).toBe(200);
     expect((await request(app).get('/cameras').set(authHeader(user))).status).toBe(403);
+  });
+
+  it('empresa ativa suspensa com outra ativa: vira provisório e escolhe outra sem novo login', async () => {
+    const [a, b] = [await createEmpresa(), await createEmpresa()];
+    const user = await createProfile({ role: 'admin', empresa_id: a.id });
+    await vincular(user.id, b.id);
+    const h = authHeaderEmpresa(user, a.id);
+    await prisma.empresas.update({ where: { id: a.id }, data: { ativo: false } });
+
+    const me = await request(app).get('/auth/me').set(h);
+    expect(me.status).toBe(200);
+    expect(me.body.empresa).toBeNull();
+    const cameras = await request(app).get('/cameras').set(h);
+    expect(cameras.status).toBe(403);
+    expect(cameras.body.code).toBe('escolher_empresa');
+    expect((await request(app).post('/auth/empresa').set(h).send({ empresa_id: a.id })).status).toBe(403);
+    const troca = await request(app).post('/auth/empresa').set(h).send({ empresa_id: b.id });
+    expect(troca.status).toBe(200);
+    expect((await request(app).get('/cameras').set({ Authorization: `Bearer ${troca.body.token}` })).status).toBe(200);
+  });
+
+  it('empresa ativa suspensa sem outra ativa → 403 Empresa suspensa', async () => {
+    const [a, b] = [await createEmpresa(), await createEmpresa({ ativo: false })];
+    const user = await createProfile({ role: 'admin', empresa_id: a.id });
+    await vincular(user.id, b.id);
+    await prisma.empresas.update({ where: { id: a.id }, data: { ativo: false } });
+    const res = await request(app).get('/auth/me').set(authHeaderEmpresa(user, a.id));
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe('Empresa suspensa');
   });
 
   it('emp de empresa sem vínculo → 401 "Você não tem mais acesso a esta empresa"', async () => {

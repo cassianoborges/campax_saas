@@ -90,6 +90,11 @@ export function requireRole(required: UserRole) {
 /** Company routes: rejects platform_admin (who has no empresa) and scopes req.db to the caller's empresa. */
 export function requireTenant(req: Request, res: Response, next: NextFunction) {
   if (!req.empresa) {
+    if (req.profile?.role !== 'platform_admin') {
+      // Provisional session (several empresas, none chosen yet, or the active one was suspended):
+      // the frontend reacts to this code by sending the user to /admin/escolher-empresa.
+      return res.status(403).json({ success: false, error: 'Escolha a empresa para continuar', code: 'escolher_empresa' });
+    }
     return res.status(403).json({ success: false, error: 'Rota disponível apenas para usuários de uma empresa' });
   }
   req.db = prismaForEmpresa(req.empresa.id, req.profile!.id);

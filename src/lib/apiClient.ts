@@ -13,6 +13,9 @@ export function clearToken(): void {
   localStorage.removeItem(TOKEN_KEY);
 }
 
+/** Fired when the backend answers that the session must pick an empresa (e.g. the active one was suspended). */
+export const ESCOLHER_EMPRESA_EVENT = 'campax:escolher-empresa';
+
 export class ApiError extends Error {
   status: number;
   constructor(message: string, status: number) {
@@ -34,6 +37,7 @@ async function request<T = unknown>(path: string, options: RequestInit = {}): Pr
   if (res.status === 401) clearToken();
 
   const json = await res.json().catch(() => ({}));
+  if (res.status === 403 && json?.code === 'escolher_empresa') window.dispatchEvent(new Event(ESCOLHER_EMPRESA_EVENT));
   if (!res.ok || json?.success === false) {
     throw new ApiError(json?.error || `Erro ${res.status}`, res.status);
   }
