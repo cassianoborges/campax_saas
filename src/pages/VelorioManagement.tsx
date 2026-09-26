@@ -423,11 +423,20 @@ const VelorioManagement = () => {
     };
 
     if (editingVelorioId) {
-      await updateVelorio.mutateAsync({ id: editingVelorioId, data: velorioData });
+      try {
+        await updateVelorio.mutateAsync({ id: editingVelorioId, data: velorioData });
+      } catch {
+        return; // the hook's onError already shows the toast
+      }
       await saveFotoIfPending(editingVelorioId);
       setIsDialogOpen(false);
     } else {
-      const result = await createVelorio.mutateAsync(velorioData);
+      let result;
+      try {
+        result = await createVelorio.mutateAsync(velorioData);
+      } catch {
+        return; // the hook's onError already shows the toast
+      }
       if (result) {
         const fotoOk = await saveFotoIfPending(result.id);
         if (fotoOk) {
@@ -444,7 +453,7 @@ const VelorioManagement = () => {
 
   const handleDelete = async (id: string) => {
     if (confirm('Tem certeza que deseja excluir este velório?')) {
-      await deleteVelorio.mutateAsync(id);
+      await deleteVelorio.mutateAsync(id).catch(() => {}); // the hook's onError already shows the toast
     }
   };
 

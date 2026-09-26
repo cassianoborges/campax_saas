@@ -37,10 +37,14 @@ const HomenagensTemplatesManagement = () => {
   const handleSave = async () => {
     if (!formData.titulo || !formData.mensagem) return;
 
-    if (editingTemplate) {
-      await updateTemplate.mutateAsync({ id: editingTemplate.id, data: formData });
-    } else {
-      await createTemplate.mutateAsync(formData);
+    try {
+      if (editingTemplate) {
+        await updateTemplate.mutateAsync({ id: editingTemplate.id, data: formData });
+      } else {
+        await createTemplate.mutateAsync(formData);
+      }
+    } catch {
+      return; // the hook's onError already shows the toast
     }
 
     setIsDialogOpen(false);
@@ -49,7 +53,7 @@ const HomenagensTemplatesManagement = () => {
 
   const handleDelete = async (id: string) => {
     if (confirm('Tem certeza que deseja excluir esta mensagem?')) {
-      await deleteTemplate.mutateAsync(id);
+      await deleteTemplate.mutateAsync(id).catch(() => {}); // the hook's onError already shows the toast
     }
   };
 

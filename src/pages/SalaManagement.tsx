@@ -104,10 +104,14 @@ const SalaManagement = () => {
       return;
     }
 
-    if (editingSalaId) {
-      await updateSala.mutateAsync({ id: editingSalaId, data: formData });
-    } else {
-      await createSala.mutateAsync(formData);
+    try {
+      if (editingSalaId) {
+        await updateSala.mutateAsync({ id: editingSalaId, data: formData });
+      } else {
+        await createSala.mutateAsync(formData);
+      }
+    } catch {
+      return; // the hook's onError already shows the toast
     }
 
     setIsDialogOpen(false);
@@ -116,7 +120,7 @@ const SalaManagement = () => {
 
   const handleDelete = async (id: string) => {
     if (confirm('Tem certeza que deseja excluir esta sala?')) {
-      await deleteSala.mutateAsync(id);
+      await deleteSala.mutateAsync(id).catch(() => {}); // the hook's onError already shows the toast
     }
   };
 

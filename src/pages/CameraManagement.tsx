@@ -69,10 +69,14 @@ const CameraManagement = () => {
   const handleSave = async () => {
     if (!formData.nome || !formData.rtsp_url) return;
 
-    if (editingCamera) {
-      await updateCamera.mutateAsync({ id: editingCamera.id, data: formData });
-    } else {
-      await createCamera.mutateAsync(formData);
+    try {
+      if (editingCamera) {
+        await updateCamera.mutateAsync({ id: editingCamera.id, data: formData });
+      } else {
+        await createCamera.mutateAsync(formData);
+      }
+    } catch {
+      return; // the hook's onError already shows the toast
     }
 
     setIsDialogOpen(false);
@@ -81,7 +85,7 @@ const CameraManagement = () => {
 
   const handleDelete = async (id: string) => {
     if (confirm('Tem certeza que deseja excluir esta câmera?')) {
-      await deleteCamera.mutateAsync(id);
+      await deleteCamera.mutateAsync(id).catch(() => {}); // the hook's onError already shows the toast
     }
   };
 
