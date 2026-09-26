@@ -92,7 +92,7 @@ export function requireTenant(req: Request, res: Response, next: NextFunction) {
   if (!req.empresa) {
     return res.status(403).json({ success: false, error: 'Rota disponível apenas para usuários de uma empresa' });
   }
-  req.db = prismaForEmpresa(req.empresa.id);
+  req.db = prismaForEmpresa(req.empresa.id, req.profile!.id);
   next();
 }
 
