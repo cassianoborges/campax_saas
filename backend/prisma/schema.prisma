@@ -98,6 +98,8 @@ model profiles {
   id              String    @id @db.Uuid
   email           String    @unique
   password_hash   String?
+  /// Última troca/redefinição de senha; logins (JWT) emitidos com outro valor deixam de valer.
+  senha_alterada_em DateTime? @db.Timestamptz(3)
   full_name       String?
   role            user_role @default(viewer)
   is_active       Boolean   @default(true)

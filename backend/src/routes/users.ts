@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import { Router } from 'express';
 import { tenantGuard } from '../auth/middleware';
-import { hashPassword } from '../auth/password';
+import { hashPassword, MIN_PASSWORD_LENGTH, novaSenha } from '../auth/password';
 import { handleError, TENANT_ROLES } from '../lib/http';
 
 // A superadmin manages the users of their own empresa (req.db scopes profiles). Roles are limited
@@ -52,7 +52,12 @@ usersRouter.patch('/:id', async (req, res) => {
   try {
     const { password, full_name, numero_whatsapp, agente_ia } = req.body as Record<string, any>;
     const data: Record<string, any> = { full_name, numero_whatsapp, agente_ia };
-    if (password) data.password_hash = await hashPassword(password);
+    if (password) {
+      if (typeof password !== 'string' || password.length < MIN_PASSWORD_LENGTH) {
+        return res.status(400).json({ success: false, error: `A senha precisa ter pelo menos ${MIN_PASSWORD_LENGTH} caracteres` });
+      }
+      Object.assign(data, await novaSenha(password));
+    }
 
     const user = await req.db!.profiles.update({ where: { id: req.params.id }, data });
     res.json({ success: true, data: omitPasswordHash(user) });

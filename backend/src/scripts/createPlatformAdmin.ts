@@ -3,15 +3,13 @@ import '../env';
 import { randomUUID } from 'crypto';
 import readline from 'readline';
 import { prisma } from '../prisma';
-import { hashPassword } from '../auth/password';
+import { hashPassword, MIN_PASSWORD_LENGTH } from '../auth/password';
 
 // The only way to create a platform_admin — no API route can create or promote one.
 //
 //   npm run create-platform-admin -- --email equipe@campax.com.br [--name "Nome"]
 //
 // Asks for the password without echoing it; with a non-TTY stdin (e.g. piped) it reads the first line.
-
-const MIN_PASSWORD_LENGTH = 8;
 
 function argValue(flag: string): string | undefined {
   const args = process.argv.slice(2);

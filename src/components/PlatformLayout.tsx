@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { useAuth } from '@/hooks/useAuth';
+import { AlterarSenhaDialog } from '@/components/AlterarSenhaDialog';
 import { Building, LogOut, Menu, MessageSquareHeart } from 'lucide-react';
 
 type PlatformSection = 'empresas' | 'modelos';
@@ -58,6 +59,7 @@ export function PlatformLayout({ children, activeSection }: PlatformLayoutProps)
                 {navItem('modelos', 'Modelos de homenagem', '/platform/modelos-homenagem', MessageSquareHeart)}
             </nav>
             {profile && <p className="text-cream/40 text-xs mb-3 truncate">{profile.email}</p>}
+            <AlterarSenhaDialog />
             <Button
                 variant="ghost"
                 className="w-full justify-start text-cream/50 hover:bg-destructive/20 hover:text-destructive"

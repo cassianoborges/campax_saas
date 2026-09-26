@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction, RequestHandler } from 'express';
 import { prisma } from '../prisma';
-import { verifyToken } from './jwt';
+import { sessaoVersao, verifyToken } from './jwt';
 import { empresas as Empresa, profiles as Profile, user_role as UserRole } from '@prisma/client';
 import { prismaForEmpresa, TenantPrisma } from '../tenant/prismaForEmpresa';
 
@@ -39,6 +39,9 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     const profile = await prisma.profiles.findUnique({ where: { id: payload.sub }, include: { empresa: true } });
     if (!profile || !profile.is_active) {
       return res.status(401).json({ success: false, error: 'Sessão inválida' });
+    }
+    if (payload.sv !== sessaoVersao(profile)) {
+      return res.status(401).json({ success: false, error: 'Sessão encerrada: a senha foi alterada' });
     }
     if (profile.empresa && !profile.empresa.ativo) {
       return res.status(403).json({ success: false, error: 'Empresa suspensa' });

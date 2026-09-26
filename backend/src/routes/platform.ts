@@ -7,7 +7,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../prisma';
 import { isReservedSlug } from '../lib/empresaHost';
 import { requirePlatformAdmin } from '../auth/middleware';
-import { hashPassword } from '../auth/password';
+import { hashPassword, MIN_PASSWORD_LENGTH, novaSenha } from '../auth/password';
 import { handleError, pick, TEMPLATE_FIELDS, TENANT_ROLES } from '../lib/http';
 import { UPLOADS_DIR } from '../lib/uploads';
 import { notifyMediamtxSync } from '../lib/mediamtxSync';
@@ -19,7 +19,6 @@ export const platformRouter = Router();
 
 platformRouter.use(...requirePlatformAdmin);
 
-const MIN_PASSWORD_LENGTH = 8;
 const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const COR_RE = /^#[0-9a-fA-F]{6}$/;
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
@@ -310,7 +309,7 @@ platformRouter.patch('/empresas/:id/usuarios/:uid/senha', async (req, res) => {
     const password = String(req.body?.password ?? '');
     if (password.length < MIN_PASSWORD_LENGTH) return bad(res, `A senha precisa ter pelo menos ${MIN_PASSWORD_LENGTH} caracteres`);
     const user = await usuarioDaEmpresa(req.params.id, req.params.uid);
-    await prisma.profiles.update({ where: { id: user.id }, data: { password_hash: await hashPassword(password) } });
+    await prisma.profiles.update({ where: { id: user.id }, data: await novaSenha(password) });
     log(req, 'redefinir-senha', req.params.id, `usuario=${user.id}`);
     res.json({ success: true });
   } catch (error) {
