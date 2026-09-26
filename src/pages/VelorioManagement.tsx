@@ -17,6 +17,7 @@ import { usePresenceMultiple } from '@/hooks/usePresenceMultiple';
 import { useVisitantes } from '@/hooks/useVisitantes';
 import { exportVisitantesToCSV, downloadCSV } from '@/services/visitantesService';
 import { uploadFotoFalecido } from '@/services/storageService';
+import { fromDatetimeLocalValue, toDatetimeLocalValue } from '@/lib/datetimeLocal';
 import { checkMultipleCameras } from '@/services/cameraStatusService';
 import {
   Plus,
@@ -231,22 +232,6 @@ interface VelorioFormData {
   data_sepultamento: string;
   local_sepultamento: string;
   google_maps_url_sepultamento: string;
-}
-
-// Converte um timestamp armazenado (UTC) para o valor esperado por um
-// <input type="datetime-local">, que representa hora LOCAL, não UTC.
-// Usar toISOString() aqui erroneamente extrairia os dígitos em UTC.
-function toDatetimeLocalValue(isoString: string): string {
-  const date = new Date(isoString);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
-
-// Converte o valor de um <input type="datetime-local"> (hora local, sem
-// timezone) para um ISO string com o offset correto antes de enviar ao
-// Supabase. Sem isso, a string sem timezone é gravada como se já fosse UTC.
-function fromDatetimeLocalValue(localValue: string): string {
-  return new Date(localValue).toISOString();
 }
 
 const VelorioManagement = () => {
