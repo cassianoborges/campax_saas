@@ -33,7 +33,7 @@ authRouter.post('/login', async (req, res) => {
       return res.json({ success: true, token: tokenFor(profile), profile: safeProfile, empresa: null, empresas: [] });
     }
 
-    let escolhida = slug ? empresas.find((e) => e.slug === slug) : empresas.length === 1 ? empresas[0] : undefined;
+    const escolhida = slug ? empresas.find((e) => e.slug === slug) : empresas.length === 1 ? empresas[0] : undefined;
     // Checked only after the password, so these answers reveal nothing about which e-mails exist.
     if (slug && !escolhida) return res.status(401).json({ success: false, error: 'Credenciais inválidas' });
     if (empresas.length === 0) {
