@@ -133,8 +133,7 @@ Depois, a F6 só acrescenta o filtro por empresa (`req.db`) e a validação ao s
 - **camera-status-api desta VPS desligada** (`systemctl disable --now campax-cam-status`). Ela estava **aberta na
   internet** (porta 3011, sem firewall) e respondia `online` para `127.0.0.1:5432`, o Postgres interno. Foram removidos
   `camera-status-api.cjs`, `.env.camera-status-api.example` e `docs/camera-status-deployment.md`. A unit systemd
-  continua em `/etc/systemd/system/` (sem uso). O arquivo local `.env.camera-status-api`, fora do git, tem chaves do
-  Supabase e **não foi apagado**: apague quando o Supabase for desligado.
+  e o arquivo local `.env.camera-status-api` (fora do git, com chaves do Supabase) foram apagados em 2026-09-26.
 - **Pendente (precisa de autorização):** desligar o serviço em **77.42.69.91** e remover o proxy `check.campax.com.br`.
   Ele continua sendo um varredor de portas público, embora o sistema não o use mais.
 - 23 testes novos no backend (132 no total) e 6 no mediamtx-sync (16 no total).

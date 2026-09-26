@@ -133,6 +133,11 @@ cd campax
 # Instalar dependências do frontend
 npm install
 
+# Instalar dependências do backend
+cd backend
+npm install
+cd ..
+
 # Instalar dependências do mediamtx-sync
 cd mediamtx-sync
 npm install
@@ -141,30 +146,28 @@ cd ..
 
 ### 3. Configurar variáveis de ambiente
 
-```bash
-# Criar arquivo .env na raiz do projeto
-nano .env
-```
-
-Adicione as seguintes variáveis (ajuste conforme necessário):
-
-```env
-VITE_SUPABASE_URL=sua_url_do_supabase
-VITE_SUPABASE_ANON_KEY=sua_chave_anonima_do_supabase
-```
+Cada parte tem o seu `.env` (o backend e o mediamtx-sync têm um `.env.example` com todas as variáveis comentadas):
 
 ```bash
-# Criar arquivo .env para o mediamtx-sync
+cp backend/.env.example backend/.env
+cp mediamtx-sync/.env.example mediamtx-sync/.env
+nano .env               # frontend
+nano backend/.env
 nano mediamtx-sync/.env
 ```
 
-Adicione as variáveis necessárias:
+Frontend (`.env` na raiz, lido no build — mudar exige `npm run build` de novo):
 
 ```env
-SUPABASE_URL=sua_url_do_supabase
-SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key
-MEDIAMTX_API_URL=http://localhost:9997
+VITE_API_URL=https://backend.seu-dominio.com
+VITE_BASE_DOMAIN=seu-dominio.com   # vazio = sem subdomínio por funerária
 ```
+
+Backend (`backend/.env`): `DATABASE_URL` (Postgres local), `JWT_SECRET`, `FRONTEND_ORIGIN`, `BASE_DOMAIN`,
+`MEDIAMTX_SYNC_URL`, `MEDIAMTX_AUTH_KEY`, `MEDIAMTX_API_USER`, `MEDIAMTX_API_PASSWORD` — ver `backend/.env.example`.
+
+mediamtx-sync (`mediamtx-sync/.env`): `DATABASE_URL` (o mesmo Postgres), `MEDIAMTX_BASE_URL`, `MEDIAMTX_API_PORT`,
+`MEDIAMTX_WEBRTC_BASE_URL`, `MEDIAMTX_USER`, `MEDIAMTX_PASSWORD`, `PORT`, `SYNC_INTERVAL`.
 
 > [!IMPORTANT]
 > Nunca commite arquivos `.env` no Git. Eles devem conter informações sensíveis.
@@ -174,6 +177,11 @@ MEDIAMTX_API_URL=http://localhost:9997
 ```bash
 # Build do frontend
 npm run build
+
+# Build do backend (também roda prisma generate)
+cd backend
+npm run build
+cd ..
 
 # Build do mediamtx-sync
 cd mediamtx-sync
@@ -559,15 +567,18 @@ pm2 save
 sudo journalctl -u pm2-campax -f
 ```
 
-### Aplicação não conecta ao Supabase
+### Backend não conecta ao banco
 
 ```bash
-# Verificar variáveis de ambiente
-cat .env
-cat mediamtx-sync/.env
+# Verificar o DATABASE_URL (backend e mediamtx-sync usam o mesmo Postgres local)
+grep DATABASE_URL backend/.env mediamtx-sync/.env
 
-# Testar conectividade
-curl -I https://seu-projeto.supabase.co
+# Postgres de pé e escutando só em 127.0.0.1:5432
+sudo systemctl status postgresql
+pg_isready -h 127.0.0.1 -p 5432
+
+# Erro de conexão aparece aqui
+pm2 logs campax-backend-velorio --err
 ```
 
 ### Problemas de permissão
@@ -669,7 +680,7 @@ free -h
 
 Para mais informações sobre o projeto, consulte:
 - [README.md](../README.md)
-- [PM2 Deployment Guide](./pm2-deployment.md)
+- [CLAUDE.md](../CLAUDE.md) — arquitetura, portas, domínios e variáveis de ambiente
 
 ---
 
