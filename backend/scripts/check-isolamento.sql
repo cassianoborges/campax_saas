@@ -32,15 +32,11 @@ SELECT checagem, problemas FROM (
     FROM terms_acceptances t JOIN velorios v ON v.id = t.velorio_id
    WHERE t.empresa_id <> v.empresa_id
   UNION ALL
-  SELECT 6, 'usuário de empresa sem empresa / platform_admin com empresa', count(*)
-    FROM profiles
-   WHERE (role = 'platform_admin') <> (empresa_id IS NULL)
+  SELECT 6, 'platform_admin com vínculo', count(*)
+    FROM usuario_empresas ue JOIN profiles p ON p.id = ue.profile_id
+   WHERE p.role = 'platform_admin'
   UNION ALL
-  SELECT 7, 'velório criado por usuário de outra empresa', count(*)
-    FROM velorios v JOIN profiles p ON p.id = v.created_by
-   WHERE p.empresa_id IS NOT NULL AND p.empresa_id <> v.empresa_id
-  UNION ALL
-  SELECT 8, 'caminho do MediaMTX sem o prefixo da empresa', count(*)
+  SELECT 7, 'caminho do MediaMTX sem o prefixo da empresa', count(*)
     FROM cameras c JOIN empresas e ON e.id = c.empresa_id
    WHERE c.mediamtx_path IS NOT NULL AND c.mediamtx_path NOT LIKE e.slug || '-%'
 ) checks

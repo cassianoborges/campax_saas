@@ -138,4 +138,16 @@ describe('isolamento com usuário em duas empresas', () => {
       for (const id of idsOf(outra)) expect(vistos, `id vazou em ${rota}`).not.toContain(id);
     }
   });
+
+  it('agindo por A, recursos de B por id dão 404', async () => {
+    const f = await duasEmpresas();
+    const compartilhado = await createProfile({ role: 'superadmin', empresa_id: f.A.empresa.id });
+    await vincular(compartilhado.id, f.B.empresa.id);
+    const provisorio = (await login(compartilhado.email)).body.token;
+    const token = (await request(app).post('/auth/empresa').set(bearer(provisorio)).send({ empresa_id: f.A.empresa.id })).body.token;
+
+    expect((await request(app).get(`/velorios/${f.B.velorio.id}`).set(bearer(token))).status).toBe(404);
+    expect((await request(app).patch(`/cameras/${f.B.camera.id}`).set(bearer(token)).send({ nome: 'x' })).status).toBe(404);
+    expect((await request(app).patch(`/salas/${f.B.sala.id}`).set(bearer(token)).send({ nome_sala_velorio: 'x' })).status).toBe(404);
+  });
 });

@@ -10,7 +10,10 @@ import { prisma } from '../prisma';
 //
 // Not covered here, by design:
 //   - nested include/select: relations only point inside the same empresa (composite FKs from
-//     001_multiempresa.sql + assertPertence on camera links), so they can't leak;
+//     001_multiempresa.sql + assertPertence on camera links), so they can't leak — EXCEPT
+//     profiles.vinculos (the `usuario_empresas` relation): a shared user's other empresas would
+//     be visible through it. Routes must never `include`/`select` vinculos through req.db; only
+//     `_count` on it is used (see PROFILES below).
 //   - create/createMany on child models: routes call assertPertence on the parent first.
 
 type Filter = (empresaId: string) => Record<string, unknown>;

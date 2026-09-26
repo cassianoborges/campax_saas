@@ -275,28 +275,29 @@ export default function UserManagement() {
                                                         </AlertDialogContent>
                                                     </AlertDialog>
 
-                                                    <AlertDialog>
-                                                        <AlertDialogTrigger asChild>
-                                                            <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10" title="Remover da empresa">
-                                                                <UserMinus className="w-4 h-4" />
-                                                            </Button>
-                                                        </AlertDialogTrigger>
-                                                        <AlertDialogContent>
-                                                            <AlertDialogHeader>
-                                                                <AlertDialogTitle>Remover da empresa?</AlertDialogTitle>
-                                                                <AlertDialogDescription>
-                                                                    {u.email} perderá o acesso a esta empresa imediatamente.
-                                                                    {compartilhado ? ' O acesso às outras empresas continua.' : ' Ele não terá mais acesso a nenhuma empresa.'}
-                                                                </AlertDialogDescription>
-                                                            </AlertDialogHeader>
-                                                            <AlertDialogFooter>
-                                                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                                <AlertDialogAction onClick={() => handleRemover(u)} className="bg-destructive hover:bg-destructive/90">
-                                                                    Remover
-                                                                </AlertDialogAction>
-                                                            </AlertDialogFooter>
-                                                        </AlertDialogContent>
-                                                    </AlertDialog>
+                                                    {compartilhado && (
+                                                        <AlertDialog>
+                                                            <AlertDialogTrigger asChild>
+                                                                <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10" title="Remover da empresa">
+                                                                    <UserMinus className="w-4 h-4" />
+                                                                </Button>
+                                                            </AlertDialogTrigger>
+                                                            <AlertDialogContent>
+                                                                <AlertDialogHeader>
+                                                                    <AlertDialogTitle>Remover da empresa?</AlertDialogTitle>
+                                                                    <AlertDialogDescription>
+                                                                        {u.email} perderá o acesso a esta empresa imediatamente. O acesso às outras empresas continua.
+                                                                    </AlertDialogDescription>
+                                                                </AlertDialogHeader>
+                                                                <AlertDialogFooter>
+                                                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                                    <AlertDialogAction onClick={() => handleRemover(u)} className="bg-destructive hover:bg-destructive/90">
+                                                                        Remover
+                                                                    </AlertDialogAction>
+                                                                </AlertDialogFooter>
+                                                            </AlertDialogContent>
+                                                        </AlertDialog>
+                                                    )}
                                                 </>
                                             )}
                                         </div>

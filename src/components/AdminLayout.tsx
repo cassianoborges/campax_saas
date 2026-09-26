@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { AlterarSenhaDialog } from '@/components/AlterarSenhaDialog';
 import { TrocarEmpresaDialog } from '@/components/TrocarEmpresaDialog';
 import { EmpresaLogo } from '@/components/EmpresaLogo';
+import { HOST_SLUG } from '@/lib/hostEmpresa';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import {
     LayoutDashboard,
@@ -124,7 +125,7 @@ export function AdminLayout({ children, activeSection }: AdminLayoutProps) {
                 )}
             </nav>
 
-            {empresas.length > 1 && <TrocarEmpresaDialog />}
+            {!HOST_SLUG && empresas.length > 1 && <TrocarEmpresaDialog />}
             <AlterarSenhaDialog />
             <Button
                 variant="ghost"
