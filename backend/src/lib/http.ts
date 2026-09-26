@@ -48,7 +48,7 @@ export const SALA_FIELDS = [
 export const VELORIO_FIELDS = [
   'nome_falecido', 'data_inicio', 'data_fim', 'sala_velorio_id', 'status', 'responsavel_velorio_nome',
   'contato_whatsapp_responsavel', 'data_nascimento', 'data_falecimento', 'mensagem_homenagem',
-  'data_sepultamento', 'local_sepultamento', 'google_maps_url_sepultamento',
+  'data_sepultamento', 'local_sepultamento', 'google_maps_url_sepultamento', 'familiares',
 ] as const;
 
 export const TEMPLATE_FIELDS = ['titulo', 'mensagem'] as const;

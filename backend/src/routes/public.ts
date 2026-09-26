@@ -73,7 +73,9 @@ function withStreamUrls(velorio: PublicVelorio) {
 function sendPublicVelorio(res: Response, velorio: PublicVelorio | null) {
   const empresa = velorio ? publicEmpresa(velorio.empresa) : null;
   if (!velorio || !empresa) return notFound(res);
-  res.json({ success: true, data: { ...velorio, empresa, sala: withStreamUrls(velorio) } });
+  // familiares is for the death notice the family chooses to share, not for the public page.
+  const { familiares: _familiares, ...publico } = velorio;
+  res.json({ success: true, data: { ...publico, empresa, sala: withStreamUrls(velorio) } });
 }
 
 const isUuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
