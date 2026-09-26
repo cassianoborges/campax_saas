@@ -26,7 +26,7 @@ import {
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Users, ShieldCheck, Shield, Wrench, Eye, UserX, UserCheck, Bot, Phone } from 'lucide-react';
+import { Users, ShieldCheck, Shield, Wrench, Eye, UserX, UserCheck, UserMinus, Bot, Phone } from 'lucide-react';
 
 const ROLE_LABELS: Record<TenantRole, string> = {
     superadmin: 'Superadmin',
@@ -51,8 +51,10 @@ const ROLE_ICON: Record<TenantRole, React.ElementType> = {
 
 const ROLES: TenantRole[] = ['superadmin', 'admin', 'operador', 'viewer'];
 
+const DICA_COMPARTILHADO = 'Este usuário também atende outra empresa; fale com o suporte da Campax';
+
 export default function UserManagement() {
-    const { users, isLoading, updateRole, toggleActive } = useUsers();
+    const { users, isLoading, updateRole, toggleActive, removerDaEmpresa } = useUsers();
     const { user: currentUser } = useAuth();
     const { toast } = useToast();
 
@@ -76,6 +78,15 @@ export default function UserManagement() {
             });
         } catch {
             toast({ title: 'Erro ao alterar status', variant: 'destructive' });
+        }
+    };
+
+    const handleRemover = async (u: ProfileRow) => {
+        try {
+            await removerDaEmpresa.mutateAsync(u.id);
+            toast({ title: 'Usuário removido da empresa', description: `${u.email} não tem mais acesso a esta empresa.` });
+        } catch (error) {
+            toast({ title: 'Erro ao remover', description: (error as Error).message, variant: 'destructive' });
         }
     };
 
@@ -137,6 +148,7 @@ export default function UserManagement() {
                             {users.map((u) => {
                                 const isCurrentUser = u.id === currentUser?.id;
                                 const RoleIcon = ROLE_ICON[u.role as TenantRole];
+                                const compartilhado = u.outras_empresas > 0;
                                 return (
                                     <div
                                         key={u.id}
@@ -166,6 +178,9 @@ export default function UserManagement() {
                                                     )}
                                                 </p>
                                                 <p className="text-sm text-muted-foreground truncate">{u.email}</p>
+                                                {compartilhado && (
+                                                    <p className="text-xs text-muted-foreground mt-0.5">Também atende outra empresa</p>
+                                                )}
                                                 {u.numero_whatsapp && (
                                                     <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                                                         <Phone className="w-3 h-3" />
@@ -185,7 +200,7 @@ export default function UserManagement() {
                                                 {ROLE_LABELS[u.role as TenantRole]}
                                             </span>
 
-                                            <EditUserDialog user={u} />
+                                            <EditUserDialog user={u} permitirSenha={!compartilhado} />
 
                                             {!isCurrentUser && (
                                                 <>
@@ -194,9 +209,12 @@ export default function UserManagement() {
                                                         onValueChange={(v) =>
                                                             handleRoleChange(u.id, v as TenantRole)
                                                         }
-                                                        disabled={updateRole.isPending}
+                                                        disabled={updateRole.isPending || compartilhado}
                                                     >
-                                                        <SelectTrigger className="w-36 h-8 text-xs">
+                                                        <SelectTrigger
+                                                            className="w-36 h-8 text-xs"
+                                                            title={compartilhado ? DICA_COMPARTILHADO : undefined}
+                                                        >
                                                             <SelectValue />
                                                         </SelectTrigger>
                                                         <SelectContent>
@@ -213,6 +231,8 @@ export default function UserManagement() {
                                                             <Button
                                                                 variant="ghost"
                                                                 size="sm"
+                                                                disabled={compartilhado}
+                                                                title={compartilhado ? DICA_COMPARTILHADO : undefined}
                                                                 className={
                                                                     u.is_active
                                                                         ? 'text-destructive hover:bg-destructive/10'
@@ -250,6 +270,29 @@ export default function UserManagement() {
                                                                     }
                                                                 >
                                                                     {u.is_active ? 'Desativar' : 'Reativar'}
+                                                                </AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
+
+                                                    <AlertDialog>
+                                                        <AlertDialogTrigger asChild>
+                                                            <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10" title="Remover da empresa">
+                                                                <UserMinus className="w-4 h-4" />
+                                                            </Button>
+                                                        </AlertDialogTrigger>
+                                                        <AlertDialogContent>
+                                                            <AlertDialogHeader>
+                                                                <AlertDialogTitle>Remover da empresa?</AlertDialogTitle>
+                                                                <AlertDialogDescription>
+                                                                    {u.email} perderá o acesso a esta empresa imediatamente.
+                                                                    {compartilhado ? ' O acesso às outras empresas continua.' : ' Ele não terá mais acesso a nenhuma empresa.'}
+                                                                </AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                                <AlertDialogAction onClick={() => handleRemover(u)} className="bg-destructive hover:bg-destructive/90">
+                                                                    Remover
                                                                 </AlertDialogAction>
                                                             </AlertDialogFooter>
                                                         </AlertDialogContent>

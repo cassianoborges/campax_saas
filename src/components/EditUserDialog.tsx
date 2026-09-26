@@ -15,7 +15,7 @@ import { useUsers, ProfileRow } from '@/hooks/useUsers';
 import { useToast } from '@/hooks/use-toast';
 import { generatePassword } from '@/lib/generatePassword';
 
-export function EditUserDialog({ user }: { user: ProfileRow }) {
+export function EditUserDialog({ user, permitirSenha = true }: { user: ProfileRow; permitirSenha?: boolean }) {
     const [open, setOpen] = useState(false);
     const [fullName, setFullName] = useState(user.full_name || '');
     const [whatsapp, setWhatsapp] = useState(user.numero_whatsapp || '');
@@ -89,29 +89,35 @@ export function EditUserDialog({ user }: { user: ProfileRow }) {
                             placeholder="+55 62 99999-9999"
                         />
                     </div>
-                    <div className="space-y-1">
-                        <Label htmlFor="edit-password">Nova senha</Label>
-                        <div className="flex items-center gap-2">
-                            <Input
-                                id="edit-password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                placeholder="Deixe em branco para manter a senha atual"
-                            />
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="icon"
-                                title="Gerar senha"
-                                onClick={() => setPassword(generatePassword())}
-                            >
-                                <RefreshCw className="w-4 h-4" />
-                            </Button>
+                    {permitirSenha ? (
+                        <div className="space-y-1">
+                            <Label htmlFor="edit-password">Nova senha</Label>
+                            <div className="flex items-center gap-2">
+                                <Input
+                                    id="edit-password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    placeholder="Deixe em branco para manter a senha atual"
+                                />
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    title="Gerar senha"
+                                    onClick={() => setPassword(generatePassword())}
+                                >
+                                    <RefreshCw className="w-4 h-4" />
+                                </Button>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                Deixe em branco para manter a senha atual.
+                            </p>
                         </div>
+                    ) : (
                         <p className="text-xs text-muted-foreground">
-                            Deixe em branco para manter a senha atual.
+                            A senha deste usuário só pode ser redefinida pelo suporte da Campax, porque ele também atende outra empresa.
                         </p>
-                    </div>
+                    )}
                     <div className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
                         <div>
                             <Label htmlFor="edit-agente-ia" className="text-sm font-medium">
