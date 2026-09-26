@@ -320,7 +320,7 @@ const VelorioManagement = () => {
     setDialogStep('form');
     setFormData({
       nome_falecido: '',
-      data_inicio: '',
+      data_inicio: toDatetimeLocalValue(new Date().toISOString()),
       data_fim: '',
       sala_velorio_id: '',
       responsavel_velorio_nome: '',
