@@ -11,6 +11,7 @@ import { hashPassword, MIN_PASSWORD_LENGTH, novaSenha } from '../auth/password';
 import { EMAIL_RE, handleError, isTenantRole, pick, TEMPLATE_FIELDS } from '../lib/http';
 import { UPLOADS_DIR } from '../lib/uploads';
 import { notifyMediamtxSync } from '../lib/mediamtxSync';
+import { assertNaoDeixaSemSuperadmin } from '../tenant/superadmins';
 
 // Platform panel (spec docs/multiempresa/04-plataforma.md). Only platform_admin; uses the raw
 // prisma client on purpose — it works across empresas. There is no route that creates or
@@ -274,8 +275,15 @@ async function usuarioDaEmpresa(empresaId: string, userId: string) {
 platformRouter.get('/empresas/:id/usuarios', async (req, res) => {
   try {
     await prisma.empresas.findUniqueOrThrow({ where: { id: req.params.id }, select: { id: true } });
-    const users = await prisma.profiles.findMany({ where: { vinculos: { some: { empresa_id: req.params.id } } }, orderBy: { created_at: 'asc' } });
-    res.json({ success: true, data: users.map(omitPasswordHash) });
+    const users = await prisma.profiles.findMany({
+      where: { vinculos: { some: { empresa_id: req.params.id } } },
+      include: { _count: { select: { vinculos: true } } },
+      orderBy: { created_at: 'asc' },
+    });
+    res.json({
+      success: true,
+      data: users.map(({ password_hash, _count, ...u }) => ({ ...u, outras_empresas: _count.vinculos - 1 })),
+    });
   } catch (error) {
     handleError(res, error);
   }
@@ -321,10 +329,8 @@ platformRouter.patch('/empresas/:id/usuarios/:uid/ativo', async (req, res) => {
     const is_active = !!req.body?.is_active;
     const user = await usuarioDaEmpresa(req.params.id, req.params.uid);
     if (!is_active && user.role === 'superadmin' && user.is_active) {
-      const outros = await prisma.profiles.count({
-        where: { vinculos: { some: { empresa_id: req.params.id } }, role: 'superadmin', is_active: true, id: { not: user.id } },
-      });
-      if (outros === 0) return bad(res, 'Não é possível desativar o último superadmin ativo da empresa');
+      const vinculos = await prisma.usuario_empresas.findMany({ where: { profile_id: user.id }, select: { empresa_id: true } });
+      await assertNaoDeixaSemSuperadmin(user.id, vinculos.map((v) => v.empresa_id));
     }
     const updated = await prisma.profiles.update({ where: { id: user.id }, data: { is_active } });
     log(req, is_active ? 'ativar-usuario' : 'desativar-usuario', req.params.id, `usuario=${user.id}`);
