@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  COR_PRIMARIA_PADRAO, COR_SECUNDARIA_PADRAO, montarNota, nomeArquivoNota, notaCompacta, NotaEmpresa, NotaVelorio,
+  COR_PRIMARIA_PADRAO, COR_SECUNDARIA_PADRAO, escolherDensidade, montarNota, nomeArquivoNota, NotaEmpresa, NotaVelorio,
   tamanhoFamiliares, tamanhoNome,
 } from './notaFalecimento';
 
@@ -107,19 +107,14 @@ describe('tamanhos e nome do arquivo', () => {
   });
 });
 
-describe('notaCompacta', () => {
-  it('nota com pouco texto não é compacta', () => {
-    expect(notaCompacta(montarNota(velorio, empresa, opcoes))).toBe(false);
-    expect(notaCompacta(montarNota(velorio, empresa, { ...opcoes, incluirTransmissao: true }))).toBe(false);
+describe('escolherDensidade', () => {
+  it('o primeiro nível que cabe', () => {
+    expect(escolherDensidade(() => true)).toBe(0);
+    expect(escolherDensidade((d) => d >= 1)).toBe(1);
+    expect(escolherDensidade((d) => d === 2)).toBe(2);
   });
 
-  it('familiares longos deixam a nota compacta', () => {
-    expect(notaCompacta(montarNota({ ...velorio, familiares: 'a'.repeat(200) }, empresa, opcoes))).toBe(true);
-  });
-
-  it('familiares médios com sepultamento e transmissão deixam a nota compacta', () => {
-    const cheia = montarNota({ ...velorio, familiares: 'a'.repeat(120) }, empresa, { ...opcoes, incluirTransmissao: true });
-    expect(notaCompacta(cheia)).toBe(true);
-    expect(notaCompacta({ ...cheia, sepultamento: null })).toBe(false);
+  it('nenhum cabe: o mais apertado', () => {
+    expect(escolherDensidade(() => false)).toBe(2);
   });
 });

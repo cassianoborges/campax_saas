@@ -1,4 +1,4 @@
-import type { NotaFalecimentoDados } from '@/lib/notaFalecimento';
+import type { Densidade, NotaFalecimentoDados } from '@/lib/notaFalecimento';
 import { ModeloClassico } from './ModeloClassico';
 import { ModeloModerno } from './ModeloModerno';
 import { ModeloSereno } from './ModeloSereno';
@@ -7,6 +7,8 @@ import { ModeloSereno } from './ModeloSereno';
 
 export interface ModeloProps {
   dados: NotaFalecimentoDados;
+  /** Layout tightness, chosen by the dialog so the notice fits 1350 px (default 0 = regular). */
+  densidade?: Densidade;
 }
 
 export type ModeloNotaId = 'classico' | 'sereno' | 'moderno';

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { Copy, Download, ImageUp, Loader2, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,7 @@ import { useVelorios, Velorio } from '@/hooks/useVelorios';
 import { fromDatetimeLocalValue, toDatetimeLocalValue } from '@/lib/datetimeLocal';
 import { BASE_DOMAIN } from '@/lib/hostEmpresa';
 import { ALTURA_NOTA, baixar, compartilhar, copiar, gerarPng, LARGURA_NOTA, paraDataUrl, podeCompartilhar, podeCopiar } from '@/lib/imagemNota';
-import { FAMILIARES_MAX, montarNota, NotaFalecimentoDados, nomeArquivoNota } from '@/lib/notaFalecimento';
+import { Densidade, DENSIDADES, escolherDensidade, FAMILIARES_MAX, montarNota, NotaFalecimentoDados, nomeArquivoNota } from '@/lib/notaFalecimento';
 import { uploadFotoFalecido } from '@/services/storageService';
 import { MODELOS_NOTA, modeloPorId, ModeloNotaId } from './modelos';
 
@@ -75,6 +75,11 @@ export function NotaFalecimentoDialog({ velorio, open, onOpenChange }: Props) {
   const [incluirTransmissao, setIncluirTransmissao] = useState(false);
   const [fotoFile, setFotoFile] = useState<File | null>(null);
   const [fotoPreviewUrl, setFotoPreviewUrl] = useState<string | null>(null);
+  // URL of a photo uploaded in this dialog: the `velorio` prop is a snapshot and keeps the old one.
+  const [fotoSalvaUrl, setFotoSalvaUrl] = useState<string | null>(null);
+  const [densidade, setDensidade] = useState<Densidade>(0);
+  const [fontesProntas, setFontesProntas] = useState(false);
+  const medidaRef = useRef<HTMLDivElement>(null);
   const [gerando, setGerando] = useState(false);
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [dadosExport, setDadosExport] = useState<NotaFalecimentoDados | null>(null);
@@ -87,8 +92,13 @@ export function NotaFalecimentoDialog({ velorio, open, onOpenChange }: Props) {
     setIncluirTransmissao(false);
     setFotoFile(null);
     setFotoPreviewUrl(null);
+    setFotoSalvaUrl(null);
     setArquivo(null);
   }, [open, velorio]);
+
+  useEffect(() => {
+    document.fonts.ready.then(() => setFontesProntas(true));
+  }, []);
 
   useEffect(() => () => { if (fotoPreviewUrl) URL.revokeObjectURL(fotoPreviewUrl); }, [fotoPreviewUrl]);
 
@@ -104,16 +114,28 @@ export function NotaFalecimentoDialog({ velorio, open, onOpenChange }: Props) {
         data_inicio: fromDatetimeLocalValue(form.data_inicio),
         data_fim: fromDatetimeLocalValue(form.data_fim),
         data_sepultamento: form.data_sepultamento ? fromDatetimeLocalValue(form.data_sepultamento) : null,
-        foto_falecido: fotoPreviewUrl ?? velorio.foto_falecido,
+        foto_falecido: fotoPreviewUrl ?? fotoSalvaUrl ?? velorio.foto_falecido,
         token_acesso: velorio.token_acesso,
         sala: velorio.sala,
       },
       empresa,
       { incluirTransmissao, baseDomain: BASE_DOMAIN, hostAtual: window.location.host },
     );
-  }, [form, fotoPreviewUrl, velorio, empresa, incluirTransmissao, datasValidas]);
+  }, [form, fotoPreviewUrl, fotoSalvaUrl, velorio, empresa, incluirTransmissao, datasValidas]);
 
   const Modelo = modeloPorId(modeloId).componente;
+
+  // The template is rendered off screen at every density; preview and export use the first that fits 1350 px.
+  useLayoutEffect(() => {
+    const container = medidaRef.current;
+    if (!container || !dados) return;
+    setDensidade(
+      escolherDensidade((d) => {
+        const raiz = container.querySelector(`[data-densidade="${d}"]`)?.firstElementChild;
+        return !!raiz && raiz.scrollHeight <= ALTURA_NOTA;
+      }),
+    );
+  }, [dados, modeloId, fontesProntas]);
   const set = (campo: keyof Formulario) => (e: { target: { value: string } }) => {
     setForm((f) => ({ ...f, [campo]: e.target.value }));
     setArquivo(null);
@@ -154,11 +176,12 @@ export function NotaFalecimentoDialog({ velorio, open, onOpenChange }: Props) {
         return; // the hook's onError already shows the toast
       }
 
-      // A new photo that fails to upload keeps the velório's current one (if any) in the notice.
-      let fotoUrl = velorio.foto_falecido ?? null;
+      // A new photo that fails to upload keeps the current one (if any) in the notice.
+      let fotoUrl = fotoSalvaUrl ?? velorio.foto_falecido ?? null;
       if (fotoFile) {
         try {
           fotoUrl = await uploadFotoFalecido(velorio.id, fotoFile);
+          setFotoSalvaUrl(fotoUrl);
           setFotoFile(null);
         } catch (error) {
           toast({ title: 'A foto não pôde ser enviada', description: (error as Error).message, variant: 'destructive' });
@@ -265,7 +288,7 @@ export function NotaFalecimentoDialog({ velorio, open, onOpenChange }: Props) {
           <div className="order-1 md:order-2 mx-auto" style={{ width: LARGURA_NOTA * ESCALA_PREVIA, height: ALTURA_NOTA * ESCALA_PREVIA }}>
             {dados && (
               <div style={{ transform: `scale(${ESCALA_PREVIA})`, transformOrigin: 'top left', boxShadow: '0 4px 24px rgba(0,0,0,.25)' }}>
-                <Modelo dados={dados} />
+                <Modelo dados={dados} densidade={densidade} />
               </div>
             )}
           </div>
@@ -273,8 +296,15 @@ export function NotaFalecimentoDialog({ velorio, open, onOpenChange }: Props) {
 
         {/* Full-size copy used only for the export: off screen, with images already inlined. The wrapper
             carries the positioning so the exported node itself has none. */}
-        <div ref={exportRef} aria-hidden style={{ position: 'fixed', left: -20000, top: 0, pointerEvents: 'none' }}>
-          {dadosExport && <Modelo dados={dadosExport} />}
+        <div ref={exportRef} data-exportar="" aria-hidden style={{ position: 'fixed', left: -20000, top: 0, pointerEvents: 'none' }}>
+          {dadosExport && <Modelo dados={dadosExport} densidade={densidade} />}
+        </div>
+        <div ref={medidaRef} aria-hidden style={{ position: 'fixed', left: -20000, top: 0, visibility: 'hidden', pointerEvents: 'none' }}>
+          {dados && DENSIDADES.map((d) => (
+            <div key={d} data-densidade={d}>
+              <Modelo dados={dados} densidade={d} />
+            </div>
+          ))}
         </div>
       </DialogContent>
     </Dialog>

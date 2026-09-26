@@ -117,14 +117,13 @@ export function montarNota(velorio: NotaVelorio, empresa: NotaEmpresa, opcoes: N
   };
 }
 
-/**
- * A "full" notice (long family text, or family text plus burial plus live stream) doesn't fit 1350 px with
- * the regular sizes: the templates then use a smaller photo and tighter spacing.
- */
-export function notaCompacta(dados: NotaFalecimentoDados): boolean {
-  const familiares = dados.familiares?.length ?? 0;
-  if (familiares >= 200) return true;
-  return familiares >= 100 && !!dados.sepultamento && !!dados.transmissao;
+/** How tight a template is laid out: 0 = regular, 2 = tightest. The dialog picks the first level that fits. */
+export type Densidade = 0 | 1 | 2;
+export const DENSIDADES: readonly Densidade[] = [0, 1, 2];
+
+/** First density level for which `cabe` is true; the tightest one if none fits. */
+export function escolherDensidade(cabe: (densidade: Densidade) => boolean): Densidade {
+  return DENSIDADES.find(cabe) ?? DENSIDADES[DENSIDADES.length - 1];
 }
 
 /** Font size (px) of the deceased's name, so long names still fit in two lines. */

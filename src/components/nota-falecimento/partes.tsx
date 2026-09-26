@@ -1,99 +1,88 @@
 import type { ReactNode } from 'react';
-import { NotaFalecimentoDados, tamanhoFamiliares } from '@/lib/notaFalecimento';
-import { SERIF } from './estilos';
+import { Densidade, NotaFalecimentoDados, tamanhoFamiliares } from '@/lib/notaFalecimento';
+import { MEDIDAS, SERIF } from './estilos';
 
 // Building blocks of the death-notice templates. Inline styles only: html-to-image copies computed styles,
-// and inline keeps the PNG identical to the preview.
+// and inline keeps the PNG identical to the preview. Images and ornaments never shrink (flexShrink: 0):
+// when the text is long, the dialog picks a tighter density instead of letting flexbox squash them.
 
 /** The funerária's logo, or its name in text when it has none (never the Campax logo). */
-export function LogoOuNome({ empresa, cor, altura = 110 }: { empresa: NotaFalecimentoDados['empresa']; cor: string; altura?: number }) {
+export function LogoOuNome({ empresa, cor, altura }: { empresa: NotaFalecimentoDados['empresa']; cor: string; altura: number }) {
   if (empresa.logoUrl) {
-    return <img src={empresa.logoUrl} alt={empresa.nome} style={{ height: altura, maxWidth: 520, objectFit: 'contain' }} />;
+    return <img src={empresa.logoUrl} alt={empresa.nome} style={{ height: altura, maxWidth: 520, flexShrink: 0, objectFit: 'contain' }} />;
   }
-  return <div style={{ fontFamily: SERIF, fontSize: 40, fontWeight: 600, color: cor, letterSpacing: 1 }}>{empresa.nome}</div>;
+  return <div style={{ fontFamily: SERIF, fontSize: Math.round(altura * 0.36), fontWeight: 600, color: cor, letterSpacing: 1, flexShrink: 0 }}>{empresa.nome}</div>;
 }
 
-export function Chamada({ cor }: { cor: string }) {
+export function Chamada({ cor, densidade }: { cor: string; densidade: Densidade }) {
   return (
-    <div style={{ fontSize: 26, letterSpacing: 8, textTransform: 'uppercase', color: cor, fontWeight: 500 }}>
+    <div style={{ fontSize: MEDIDAS.chamada[densidade], letterSpacing: 8, textTransform: 'uppercase', color: cor, fontWeight: 500 }}>
       Nota de Falecimento
     </div>
   );
 }
 
-export function Datas({ dados, cor }: { dados: NotaFalecimentoDados; cor: string }) {
+export function Nome({ nome, tamanho, peso }: { nome: string; tamanho: number; peso: number }) {
+  return <div style={{ fontFamily: SERIF, fontSize: Math.round(tamanho), fontWeight: peso, lineHeight: 1.1 }}>{nome}</div>;
+}
+
+export function Datas({ dados, cor, densidade }: { dados: NotaFalecimentoDados; cor: string; densidade: Densidade }) {
   if (!dados.nascimento && !dados.falecimento) return null;
   return (
-    <div style={{ display: 'flex', gap: 48, justifyContent: 'center', fontSize: 32, color: cor }}>
+    <div style={{ display: 'flex', gap: 48, justifyContent: 'center', fontSize: MEDIDAS.datas[densidade], color: cor }}>
       {dados.nascimento && <span>✱ {dados.nascimento}</span>}
       {dados.falecimento && <span>✝ {dados.falecimento}</span>}
     </div>
   );
 }
 
-export function Familiares({ dados, cor }: { dados: NotaFalecimentoDados; cor: string }) {
+export function Familiares({ dados, cor, densidade }: { dados: NotaFalecimentoDados; cor: string; densidade: Densidade }) {
   if (!dados.familiares) return null;
-  return (
-    <p style={{ margin: 0, fontSize: tamanhoFamiliares(dados.familiares), lineHeight: 1.4, color: cor, fontStyle: 'italic', maxWidth: 880 }}>
-      {dados.familiares}
-    </p>
-  );
+  const fontSize = tamanhoFamiliares(dados.familiares) - MEDIDAS.familiaresMenos[densidade];
+  return <p style={{ margin: 0, fontSize, lineHeight: 1.4, color: cor, fontStyle: 'italic', maxWidth: 880 }}>{dados.familiares}</p>;
 }
 
-function Bloco({ titulo, linhas, corTitulo, corTexto, compacta }: { titulo: string; linhas: string[]; corTitulo: string; corTexto: string; compacta: boolean }) {
+function Bloco({ titulo, linhas, corTitulo, corTexto, densidade }: { titulo: string; linhas: string[]; corTitulo: string; corTexto: string; densidade: Densidade }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: compacta ? 2 : 6 }}>
-      <div style={{ fontSize: compacta ? 20 : 22, letterSpacing: 4, textTransform: 'uppercase', color: corTitulo, fontWeight: 600 }}>{titulo}</div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: MEDIDAS.blocoLinhaGap[densidade] }}>
+      <div style={{ fontSize: MEDIDAS.blocoTitulo[densidade], letterSpacing: 4, textTransform: 'uppercase', color: corTitulo, fontWeight: 600 }}>{titulo}</div>
       {linhas.map((linha) => (
-        <div key={linha} style={{ fontSize: compacta ? 27 : 30, color: corTexto }}>{linha}</div>
+        <div key={linha} style={{ fontSize: MEDIDAS.blocoLinha[densidade], color: corTexto }}>{linha}</div>
       ))}
     </div>
   );
 }
 
 /** Velório, sepultamento and (optionally) the live stream, each as a titled block. */
-export function Informacoes({ dados, corTitulo, corTexto, compacta = false }: { dados: NotaFalecimentoDados; corTitulo: string; corTexto: string; compacta?: boolean }) {
+export function Informacoes({ dados, corTitulo, corTexto, densidade }: { dados: NotaFalecimentoDados; corTitulo: string; corTexto: string; densidade: Densidade }) {
+  const bloco = { corTitulo, corTexto, densidade };
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: compacta ? 14 : 26 }}>
-      {dados.velorio && (
-        <Bloco titulo="Velório" linhas={[dados.velorio.sala, dados.velorio.quando].filter(Boolean)} corTitulo={corTitulo} corTexto={corTexto} compacta={compacta} />
-      )}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: MEDIDAS.blocoGap[densidade] }}>
+      {dados.velorio && <Bloco titulo="Velório" linhas={[dados.velorio.sala, dados.velorio.quando].filter(Boolean)} {...bloco} />}
       {dados.sepultamento && (
-        <Bloco
-          titulo="Sepultamento"
-          linhas={[dados.sepultamento.quando, dados.sepultamento.local].filter((l): l is string => !!l)}
-          corTitulo={corTitulo}
-          corTexto={corTexto}
-          compacta={compacta}
-        />
+        <Bloco titulo="Sepultamento" linhas={[dados.sepultamento.quando, dados.sepultamento.local].filter((l): l is string => !!l)} {...bloco} />
       )}
       {dados.transmissao && (
-        <Bloco
-          titulo="Acompanhe ao vivo"
-          linhas={[`${dados.transmissao.endereco} · código ${dados.transmissao.codigo}`]}
-          corTitulo={corTitulo}
-          corTexto={corTexto}
-          compacta={compacta}
-        />
+        <Bloco titulo="Acompanhe ao vivo" linhas={[`${dados.transmissao.endereco} · código ${dados.transmissao.codigo}`]} {...bloco} />
       )}
     </div>
   );
 }
 
-export function Rodape({ dados, cor }: { dados: NotaFalecimentoDados; cor: string }) {
+export function Rodape({ dados, cor, densidade }: { dados: NotaFalecimentoDados; cor: string; densidade: Densidade }) {
   if (!dados.empresa.contato) return null;
-  return <div style={{ fontSize: 24, color: cor, opacity: 0.85 }}>{dados.empresa.contato}</div>;
+  return <div style={{ fontSize: MEDIDAS.rodape[densidade], color: cor, opacity: 0.85, flexShrink: 0 }}>{dados.empresa.contato}</div>;
 }
 
 /** Thin horizontal rule. */
 export function Filete({ cor, largura = 160 }: { cor: string; largura?: number }) {
-  return <div style={{ width: largura, height: 3, background: cor, borderRadius: 2 }} />;
+  return <div style={{ width: largura, height: 3, flexShrink: 0, background: cor, borderRadius: 2 }} />;
 }
 
 /**
  * The notice's body: takes the free height between header and footer and centers its content, so a short
- * notice has no gap before the footer. Default min-height (auto): a long body grows instead of being
- * clipped at the top.
+ * notice has no gap before the footer. Default min-height (auto): a long body grows (and the dialog then
+ * picks a tighter density) instead of being clipped at the top.
  */
 export function Miolo({ gap, children }: { gap: number; children: ReactNode }) {
   return (
