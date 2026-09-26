@@ -10,6 +10,7 @@ import PublicAccess from "./pages/PublicAccess";
 import VelorioViewing from "./pages/VelorioViewing";
 import SalaPublicLink from "./pages/SalaPublicLink";
 import AdminLogin from "./pages/AdminLogin";
+import EscolherEmpresa from "./pages/EscolherEmpresa";
 import AdminDashboard from "./pages/AdminDashboard";
 import CameraManagement from "./pages/CameraManagement";
 import SalaManagement from "./pages/SalaManagement";
@@ -46,6 +47,7 @@ const App = () => (
 
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminLogin />} />
+            <Route path="/admin/escolher-empresa" element={<EscolherEmpresa />} />
             <Route path="/admin/dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
             <Route path="/admin/salas" element={<ProtectedRoute><SalaManagement /></ProtectedRoute>} />
             <Route path="/admin/cameras" element={<ProtectedRoute><CameraManagement /></ProtectedRoute>} />

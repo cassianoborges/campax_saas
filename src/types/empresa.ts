@@ -10,3 +10,8 @@ export interface EmpresaPublica {
     whatsapp_contato: string | null;
     email_contato: string | null;
 }
+
+/** An empresa in the logged-in user's list (spec 10): public fields plus whether it can be chosen. */
+export interface EmpresaResumo extends EmpresaPublica {
+    ativo: boolean;
+}

@@ -15,15 +15,15 @@ const AdminLogin = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { signIn, user, role } = useAuth();
+  const { signIn, user, role, precisaEscolherEmpresa } = useAuth();
   const { empresa: hostEmpresa } = useHostEmpresa();
 
   // Redirect if already authenticated
   useEffect(() => {
     if (user) {
-      navigate(homePathFor(role));
+      navigate(precisaEscolherEmpresa ? '/admin/escolher-empresa' : homePathFor(role));
     }
-  }, [user, role, navigate]);
+  }, [user, role, precisaEscolherEmpresa, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +32,7 @@ const AdminLogin = () => {
     const { data, error } = await signIn(email, password);
 
     if (!error) {
-      navigate(homePathFor(data?.profile.role));
+      navigate(data?.escolherEmpresa ? '/admin/escolher-empresa' : homePathFor(data?.profile.role));
     }
 
     setIsLoading(false);
