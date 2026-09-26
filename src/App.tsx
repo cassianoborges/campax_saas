@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { HostEmpresaGate } from "./components/HostEmpresaGate";
 import { HOST_SLUG } from "./lib/hostEmpresa";
+import { ESCOLHER_EMPRESA_EVENT } from "./lib/apiClient";
 import PublicAccess from "./pages/PublicAccess";
 import VelorioViewing from "./pages/VelorioViewing";
 import SalaPublicLink from "./pages/SalaPublicLink";
@@ -32,6 +33,12 @@ import PlatformUsuarioNovo from "./pages/platform/PlatformUsuarioNovo";
 import PlatformUsuarioDetalhe from "./pages/platform/PlatformUsuarioDetalhe";
 
 const queryClient = new QueryClient();
+
+// The active empresa stopped being usable (suspended): reload /auth/me, which now answers with no
+// empresa, so ProtectedRoute sends the user to /admin/escolher-empresa (or to login on a subdomain).
+window.addEventListener(ESCOLHER_EMPRESA_EVENT, () => {
+  queryClient.invalidateQueries({ queryKey: ["profile"] }, { cancelRefetch: false });
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

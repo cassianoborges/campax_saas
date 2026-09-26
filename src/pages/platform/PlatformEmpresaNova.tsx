@@ -78,20 +78,25 @@ const PlatformEmpresaNova = () => {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     const clean = (value: string) => value.trim() || undefined;
-    const result = await createEmpresa.mutateAsync({
-      empresa: {
-        nome: empresa.nome.trim(),
-        nome_exibicao: empresa.nome_exibicao.trim(),
-        slug: empresa.slug,
-        cnpj: clean(empresa.cnpj),
-        whatsapp_contato: clean(empresa.whatsapp_contato),
-        email_contato: clean(empresa.email_contato),
-        telefone: clean(empresa.telefone),
-        ...enderecoParaApi(endereco),
-      },
-      superadmin: { email: superadmin.email.trim(), password: superadmin.password, full_name: clean(superadmin.full_name) },
-    });
-    setCriada(result);
+    try {
+      setCriada(
+        await createEmpresa.mutateAsync({
+          empresa: {
+            nome: empresa.nome.trim(),
+            nome_exibicao: empresa.nome_exibicao.trim(),
+            slug: empresa.slug,
+            cnpj: clean(empresa.cnpj),
+            whatsapp_contato: clean(empresa.whatsapp_contato),
+            email_contato: clean(empresa.email_contato),
+            telefone: clean(empresa.telefone),
+            ...enderecoParaApi(endereco),
+          },
+          superadmin: { email: superadmin.email.trim(), password: superadmin.password, full_name: clean(superadmin.full_name) },
+        }),
+      );
+    } catch {
+      // the hook's onError already shows the toast
+    }
   };
 
   if (criada) {

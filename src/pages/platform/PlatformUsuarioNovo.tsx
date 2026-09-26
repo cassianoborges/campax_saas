@@ -38,11 +38,14 @@ const PlatformUsuarioNovo = () => {
 
     const salvar = async (event: React.FormEvent) => {
         event.preventDefault();
-        const user = await create.mutateAsync({
-            email: form.email.trim(), password: form.password, role: form.role,
-            full_name: form.full_name.trim() || undefined, empresa_ids: empresaIds,
-        });
-        setCriado(user);
+        try {
+            setCriado(await create.mutateAsync({
+                email: form.email.trim(), password: form.password, role: form.role,
+                full_name: form.full_name.trim() || undefined, empresa_ids: empresaIds,
+            }));
+        } catch {
+            // the hook's onError already shows the toast
+        }
     };
 
     if (criado) {

@@ -63,6 +63,16 @@ describe('superadmin e usuário compartilhado', () => {
     expect(a.id).not.toBe(b.id);
   });
 
+  it('POST /users grava quem criou o vínculo (created_by)', async () => {
+    const { a, superadmin, h } = await cenario();
+    const res = await request(app).post('/users').set(h).send({ email: 'novo-vinculo@x.com', password: 'senha-123456', role: 'viewer' });
+    expect(res.status).toBe(200);
+    const vinculo = await prisma.usuario_empresas.findUnique({
+      where: { profile_id_empresa_id: { profile_id: res.body.data.id, empresa_id: a.id } },
+    });
+    expect(vinculo?.created_by).toBe(superadmin.id);
+  });
+
   it('remover a si mesmo → 400; usuário de outra empresa → 404', async () => {
     const { superadmin, h } = await cenario();
     expect((await request(app).delete(`/users/${superadmin.id}/vinculo`).set(h)).status).toBe(400);

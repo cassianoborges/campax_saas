@@ -87,10 +87,12 @@ usersRouter.patch('/:id/role', async (req, res) => {
     }
     const atual = await usuario(req, req.params.id);
     if (serializar(atual).outras_empresas > 0) return res.status(403).json({ success: false, error: MSG_COMPARTILHADO });
-    if (atual.role === 'superadmin' && atual.is_active && req.body.role !== 'superadmin') {
-      await assertNaoDeixaSemSuperadmin(atual.id, [req.empresa!.id]);
-    }
-    const user = await req.db!.profiles.update({ where: { id: req.params.id }, data: { role: req.body.role }, include: COM_VINCULOS });
+    const user = await req.db!.$transaction(async (tx) => {
+      if (atual.role === 'superadmin' && atual.is_active && req.body.role !== 'superadmin') {
+        await assertNaoDeixaSemSuperadmin(tx, atual.id, [req.empresa!.id]);
+      }
+      return tx.profiles.update({ where: { id: req.params.id }, data: { role: req.body.role }, include: COM_VINCULOS });
+    });
     res.json({ success: true, data: serializar(user) });
   } catch (error) {
     handleError(res, error);
@@ -105,10 +107,12 @@ usersRouter.patch('/:id/active', async (req, res) => {
     }
     const atual = await usuario(req, req.params.id);
     if (serializar(atual).outras_empresas > 0) return res.status(403).json({ success: false, error: MSG_COMPARTILHADO });
-    if (!is_active && atual.role === 'superadmin' && atual.is_active) {
-      await assertNaoDeixaSemSuperadmin(atual.id, [req.empresa!.id]);
-    }
-    const user = await req.db!.profiles.update({ where: { id: req.params.id }, data: { is_active }, include: COM_VINCULOS });
+    const user = await req.db!.$transaction(async (tx) => {
+      if (!is_active && atual.role === 'superadmin' && atual.is_active) {
+        await assertNaoDeixaSemSuperadmin(tx, atual.id, [req.empresa!.id]);
+      }
+      return tx.profiles.update({ where: { id: req.params.id }, data: { is_active }, include: COM_VINCULOS });
+    });
     res.json({ success: true, data: serializar(user) });
   } catch (error) {
     handleError(res, error);
@@ -122,10 +126,12 @@ usersRouter.delete('/:id/vinculo', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Você não pode remover o próprio usuário da empresa' });
     }
     const atual = await usuario(req, req.params.id);
-    if (atual.role === 'superadmin' && atual.is_active) {
-      await assertNaoDeixaSemSuperadmin(atual.id, [req.empresa!.id]);
-    }
-    await req.db!.usuario_empresas.deleteMany({ where: { profile_id: atual.id } });
+    await req.db!.$transaction(async (tx) => {
+      if (atual.role === 'superadmin' && atual.is_active) {
+        await assertNaoDeixaSemSuperadmin(tx, atual.id, [req.empresa!.id]);
+      }
+      await tx.usuario_empresas.deleteMany({ where: { profile_id: atual.id } });
+    });
     console.log(`[users] remover-da-empresa usuario=${atual.id} empresa=${req.empresa!.id} por=${req.profile!.id}`);
     res.json({ success: true });
   } catch (error) {

@@ -72,7 +72,8 @@ function scopeData(data: unknown, empresaId: string, mode: 'create' | 'update'):
   return mode === 'create' ? { ...rest, empresa_id: empresaId } : rest;
 }
 
-export function prismaForEmpresa(empresaId: string) {
+/** `profileId` is the caller: it goes into usuario_empresas.created_by when a user is created. */
+export function prismaForEmpresa(empresaId: string, profileId: string) {
   return prisma.$extends({
     name: 'tenant',
     query: {
@@ -94,7 +95,7 @@ export function prismaForEmpresa(empresaId: string) {
             if (['delete', 'deleteMany', 'createMany', 'upsert'].includes(operation)) {
               throw new Error(`profiles.${operation} não é permitido pelo client da empresa`);
             }
-            if (operation === 'create') a.data = { ...semVinculos(a.data), vinculos: { create: { empresa_id: empresaId } } };
+            if (operation === 'create') a.data = { ...semVinculos(a.data), vinculos: { create: { empresa_id: empresaId, created_by: profileId } } };
             if (operation === 'update' || operation === 'updateMany') a.data = semVinculos(a.data);
           }
 

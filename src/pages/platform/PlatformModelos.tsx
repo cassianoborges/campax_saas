@@ -23,8 +23,12 @@ const PlatformModelos = () => {
 
   const save = async () => {
     if (!form.titulo.trim() || !form.mensagem.trim()) return;
-    if (editing) await update.mutateAsync({ id: editing.id, data: form });
-    else await create.mutateAsync(form);
+    try {
+      if (editing) await update.mutateAsync({ id: editing.id, data: form });
+      else await create.mutateAsync(form);
+    } catch {
+      return; // the hook's onError already shows the toast
+    }
     setOpen(false);
   };
 
