@@ -8,7 +8,7 @@ import { prisma } from '../prisma';
 import { isReservedSlug } from '../lib/empresaHost';
 import { requirePlatformAdmin } from '../auth/middleware';
 import { hashPassword, MIN_PASSWORD_LENGTH, novaSenha } from '../auth/password';
-import { handleError, pick, TEMPLATE_FIELDS, TENANT_ROLES } from '../lib/http';
+import { EMAIL_RE, handleError, isTenantRole, pick, TEMPLATE_FIELDS } from '../lib/http';
 import { UPLOADS_DIR } from '../lib/uploads';
 import { notifyMediamtxSync } from '../lib/mediamtxSync';
 
@@ -21,7 +21,6 @@ platformRouter.use(...requirePlatformAdmin);
 
 const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const COR_RE = /^#[0-9a-fA-F]{6}$/;
-const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const UFS = new Set(['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO']);
 
 // slug and hash_publico are immutable after creation (P1): the hash is in printed links/QR codes,
@@ -267,10 +266,6 @@ platformRouter.delete('/empresas/:id/logo', async (req, res) => {
 
 // ---------------------------------------------------------------------------------------------
 // Users of an empresa (support: create, reset password, activate/deactivate)
-
-function isTenantRole(role: unknown): role is (typeof TENANT_ROLES)[number] {
-  return typeof role === 'string' && (TENANT_ROLES as readonly string[]).includes(role);
-}
 
 async function usuarioDaEmpresa(empresaId: string, userId: string) {
   return prisma.profiles.findFirstOrThrow({ where: { id: userId, vinculos: { some: { empresa_id: empresaId } } } });

@@ -1,12 +1,16 @@
 import { Response } from 'express';
 import { Prisma } from '@prisma/client';
 import { isNotFound } from '../tenant/prismaForEmpresa';
+import { RegraSuperadminError } from '../tenant/superadmins';
 
 /**
  * Maps the errors company routes expect to HTTP statuses. A record of another empresa looks
  * exactly like a missing one (404), so the API never confirms that someone else's id exists.
  */
 export function handleError(res: Response, error: unknown, messages: { conflict?: string; foreignKey?: string } = {}) {
+  if (error instanceof RegraSuperadminError) {
+    return res.status(400).json({ success: false, error: error.message });
+  }
   if (isNotFound(error)) {
     return res.status(404).json({ success: false, error: 'Não encontrado' });
   }
@@ -50,3 +54,9 @@ export const VELORIO_FIELDS = [
 export const TEMPLATE_FIELDS = ['titulo', 'mensagem'] as const;
 
 export const TENANT_ROLES = ['superadmin', 'admin', 'operador', 'viewer'] as const;
+
+export const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+export function isTenantRole(role: unknown): role is (typeof TENANT_ROLES)[number] {
+  return typeof role === 'string' && (TENANT_ROLES as readonly string[]).includes(role);
+}
