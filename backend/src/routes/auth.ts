@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { prisma } from '../prisma';
 import { comparePassword, MIN_PASSWORD_LENGTH, novaSenha } from '../auth/password';
 import { tokenFor } from '../auth/jwt';
-import { requireAuth } from '../auth/middleware';
+import { VINCULOS_INCLUDE, requireAuth } from '../auth/middleware';
 import { toEmpresaPublica } from '../lib/empresa';
 
 export const authRouter = Router();
@@ -14,7 +14,7 @@ authRouter.post('/login', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Email e senha são obrigatórios' });
     }
 
-    const profile = await prisma.profiles.findUnique({ where: { email }, include: { empresa: true } });
+    const profile = await prisma.profiles.findUnique({ where: { email }, include: VINCULOS_INCLUDE });
     if (!profile || !profile.password_hash || !profile.is_active) {
       return res.status(401).json({ success: false, error: 'Credenciais inválidas' });
     }
@@ -23,18 +23,16 @@ authRouter.post('/login', async (req, res) => {
     if (!valid) {
       return res.status(401).json({ success: false, error: 'Credenciais inválidas' });
     }
-    // On a funerária's subdomain (spec 08) only its own users may log in. Same answer as a wrong
-    // password, and only after checking it, so this reveals nothing about the e-mail.
-    if (typeof empresa_slug === 'string' && empresa_slug && profile.empresa?.slug !== empresa_slug.toLowerCase()) {
+    const empresa = profile.vinculos[0]?.empresa ?? null;
+    if (typeof empresa_slug === 'string' && empresa_slug && empresa?.slug !== empresa_slug.toLowerCase()) {
       return res.status(401).json({ success: false, error: 'Credenciais inválidas' });
     }
-    // Checked only after the password, so the message doesn't reveal which emails exist.
-    if (profile.empresa && !profile.empresa.ativo) {
+    if (empresa && !empresa.ativo) {
       return res.status(403).json({ success: false, error: 'Empresa suspensa' });
     }
 
-    const token = tokenFor(profile);
-    const { password_hash, empresa, ...safeProfile } = profile;
+    const token = tokenFor(profile, empresa?.id);
+    const { password_hash, vinculos, ...safeProfile } = profile;
     res.json({ success: true, token, profile: safeProfile, empresa: toEmpresaPublica(empresa) });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });

@@ -62,7 +62,7 @@ model empresas {
   velorio_access_logs  velorio_access_logs[]
   terms_acceptances    terms_acceptances[]
   homenagens_templates homenagens_templates[]
-  profiles             profiles[]
+  usuario_empresas     usuario_empresas[]
 }
 
 /// Registro dos scripts de prisma/sql/ já aplicados neste banco (cada script se registra).
@@ -108,13 +108,26 @@ model profiles {
   updated_at      DateTime  @default(now()) @db.Timestamptz(6)
   numero_whatsapp String?
   agente_ia       Boolean   @default(false)
-  /// NULL só para platform_admin (CHECK profiles_empresa_platform_admin, só no banco).
-  empresa_id      String?   @db.Uuid
-  empresa         empresas? @relation(fields: [empresa_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  /// Empresas da pessoa (spec 10). platform_admin nunca tem vínculo (triggers do 003, só no banco).
+  vinculos         usuario_empresas[] @relation("vinculos")
+  vinculos_criados usuario_empresas[] @relation("vinculos_criados")
 
   @@index([is_active], map: "idx_profiles_is_active")
   @@index([role], map: "idx_profiles_role")
-  @@index([empresa_id], map: "idx_profiles_empresa")
+}
+
+/// Vínculo usuário ↔ empresa (spec 10). O papel continua em profiles.role, igual em todas as empresas.
+model usuario_empresas {
+  profile_id String    @db.Uuid
+  empresa_id String    @db.Uuid
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+  created_by String?   @db.Uuid
+  profile    profiles  @relation("vinculos", fields: [profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  empresa    empresas  @relation(fields: [empresa_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  criador    profiles? @relation("vinculos_criados", fields: [created_by], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@id([profile_id, empresa_id])
+  @@index([empresa_id], map: "idx_usuario_empresas_empresa")
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.

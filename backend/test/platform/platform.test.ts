@@ -177,8 +177,10 @@ describe('usuários de uma empresa', () => {
     const ok = await request(app).post(`/platform/empresas/${f.A.empresa.id}/usuarios`).set(plat())
       .send({ email: 'novo@a.example.com', password: 'senha-forte-1', role: 'operador' });
     expect(ok.status).toBe(200);
-    expect(ok.body.data).toMatchObject({ empresa_id: f.A.empresa.id, role: 'operador' });
+    expect(ok.body.data).toMatchObject({ role: 'operador' });
     expect(ok.body.data.password_hash).toBeUndefined();
+    const vinculo = await prisma.usuario_empresas.findUnique({ where: { profile_id_empresa_id: { profile_id: ok.body.data.id, empresa_id: f.A.empresa.id } } });
+    expect(vinculo).toBeTruthy();
 
     const plat5 = await request(app).post(`/platform/empresas/${f.A.empresa.id}/usuarios`).set(plat())
       .send({ email: 'x@a.example.com', password: 'senha-forte-1', role: 'platform_admin' });

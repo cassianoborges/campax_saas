@@ -16,7 +16,7 @@ import { prisma } from '../prisma';
 type Filter = (empresaId: string) => Record<string, unknown>;
 
 /** Models with their own empresa_id column. */
-const DIRECT_MODELS = new Set(['cameras', 'sala_velorio', 'velorios', 'velorio_access_logs', 'terms_acceptances', 'profiles']);
+const DIRECT_MODELS = new Set(['cameras', 'sala_velorio', 'velorios', 'velorio_access_logs', 'terms_acceptances']);
 
 /** Models without empresa_id: filtered through the parent relation. */
 const CHILD_FILTERS: Record<string, Filter> = {
@@ -30,6 +30,20 @@ const CHILD_FILTERS: Record<string, Filter> = {
 // D6) but can only change its own — so global templates are read-only from company routes.
 const TEMPLATES = 'homenagens_templates';
 
+// profiles have no empresa_id since spec 10: an empresa sees the users linked to it. Through req.db
+// a user is created already linked to the caller's empresa, links can't be changed by data, and a
+// user can't be deleted (that would remove them from every empresa).
+const PROFILES = 'profiles';
+// usuario_empresas through req.db: read and remove this empresa's links only — linking is a
+// platform action (spec 10, U3).
+const VINCULOS = 'usuario_empresas';
+const VINCULOS_OPS = new Set(['findMany', 'findFirst', 'count', 'delete', 'deleteMany']);
+
+function semVinculos(data: unknown): Record<string, unknown> {
+  const { vinculos: _v, vinculos_criados: _c, ...rest } = (data ?? {}) as Record<string, unknown>;
+  return rest;
+}
+
 const UNIQUE_WHERE_OPS = new Set(['findUnique', 'findUniqueOrThrow', 'update', 'delete', 'upsert']);
 const MANY_WHERE_OPS = new Set([
   'findFirst', 'findFirstOrThrow', 'findMany', 'count', 'aggregate', 'groupBy', 'updateMany', 'deleteMany',
@@ -37,6 +51,8 @@ const MANY_WHERE_OPS = new Set([
 const READ_OPS = new Set(['findUnique', 'findUniqueOrThrow', 'findFirst', 'findFirstOrThrow', 'findMany', 'count', 'aggregate', 'groupBy']);
 
 function filterFor(model: string, operation: string, empresaId: string): Record<string, unknown> | undefined {
+  if (model === PROFILES) return { vinculos: { some: { empresa_id: empresaId } } };
+  if (model === VINCULOS) return VINCULOS_OPS.has(operation) ? { empresa_id: empresaId } : undefined;
   if (DIRECT_MODELS.has(model)) return { empresa_id: empresaId };
   if (CHILD_FILTERS[model]) return CHILD_FILTERS[model](empresaId);
   if (model === TEMPLATES) {
@@ -69,6 +85,14 @@ export function prismaForEmpresa(empresaId: string) {
             a.where = { ...a.where, ...filter };
           } else if (MANY_WHERE_OPS.has(operation)) {
             a.where = a.where ? { AND: [a.where, filter] } : filter;
+          }
+
+          if (model === PROFILES) {
+            if (['delete', 'deleteMany', 'createMany', 'upsert'].includes(operation)) {
+              throw new Error(`profiles.${operation} não é permitido pelo client da empresa`);
+            }
+            if (operation === 'create') a.data = { ...semVinculos(a.data), vinculos: { create: { empresa_id: empresaId } } };
+            if (operation === 'update' || operation === 'updateMany') a.data = semVinculos(a.data);
           }
 
           const ownsEmpresaColumn = DIRECT_MODELS.has(model) || model === TEMPLATES;

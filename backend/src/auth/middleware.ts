@@ -1,8 +1,9 @@
 import { Request, Response, NextFunction, RequestHandler } from 'express';
 import { prisma } from '../prisma';
 import { sessaoVersao, verifyToken } from './jwt';
-import { empresas as Empresa, profiles as Profile, user_role as UserRole } from '@prisma/client';
+import { Prisma, empresas as Empresa, profiles as Profile, user_role as UserRole } from '@prisma/client';
 import { prismaForEmpresa, TenantPrisma } from '../tenant/prismaForEmpresa';
+import { resolverEmpresaAtiva } from './empresaAtiva';
 
 const ROLE_ORDER: Record<UserRole, number> = {
   platform_admin: 5,
@@ -19,11 +20,18 @@ declare global {
       profile?: Profile;
       /** The caller's empresa — null for platform_admin. */
       empresa?: Empresa | null;
+      /** Every empresa the user is linked to (spec 10); empty for platform_admin. */
+      vinculos?: Empresa[];
       /** Prisma client scoped to req.empresa (set by tenantGuard). */
       db?: TenantPrisma;
     }
   }
 }
+
+/** profiles include with every linked empresa, oldest link first. */
+export const VINCULOS_INCLUDE = {
+  vinculos: { include: { empresa: true }, orderBy: { created_at: 'asc' } },
+} satisfies Prisma.profilesInclude;
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   try {
@@ -34,22 +42,35 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     }
 
     const payload = verifyToken(token);
-    // The empresa comes from the DB on every request (not from the JWT), so suspending an
-    // empresa or moving a user takes effect immediately.
-    const profile = await prisma.profiles.findUnique({ where: { id: payload.sub }, include: { empresa: true } });
+    // Links and empresas come from the DB on every request (not from the JWT), so unlinking a
+    // user, suspending an empresa or changing the password takes effect immediately.
+    const profile = await prisma.profiles.findUnique({ where: { id: payload.sub }, include: VINCULOS_INCLUDE });
     if (!profile || !profile.is_active) {
       return res.status(401).json({ success: false, error: 'Sessão inválida' });
     }
     if (payload.sv !== sessaoVersao(profile)) {
       return res.status(401).json({ success: false, error: 'Sessão encerrada: a senha foi alterada' });
     }
-    if (profile.empresa && !profile.empresa.ativo) {
-      return res.status(403).json({ success: false, error: 'Empresa suspensa' });
+
+    const { vinculos, ...rest } = profile;
+    req.profile = rest;
+    req.vinculos = vinculos.map((v) => v.empresa);
+    if (rest.role === 'platform_admin') {
+      req.empresa = null;
+      return next();
     }
 
-    const { empresa, ...rest } = profile;
-    req.profile = rest;
-    req.empresa = empresa;
+    const ativa = resolverEmpresaAtiva(vinculos, payload.emp);
+    if (ativa.tipo === 'sem-vinculo') {
+      return res.status(401).json({ success: false, error: 'Nenhuma empresa vinculada a este usuário' });
+    }
+    if (ativa.tipo === 'sem-acesso') {
+      return res.status(401).json({ success: false, error: 'Você não tem mais acesso a esta empresa' });
+    }
+    if (ativa.tipo === 'empresa' && !ativa.empresa.ativo) {
+      return res.status(403).json({ success: false, error: 'Empresa suspensa' });
+    }
+    req.empresa = ativa.tipo === 'empresa' ? ativa.empresa : null;
     next();
   } catch (error) {
     return res.status(401).json({ success: false, error: 'Token inválido ou expirado' });
