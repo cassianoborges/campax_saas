@@ -83,7 +83,8 @@ Antes de rodar em `campax`: `scripts/backup-db.sh` e `scripts/restore-check.sh`.
 
 - `platform_admin`: `req.empresa = null`, como hoje (`emp` é ignorado).
 - Com `emp`: carrega o vínculo (`usuario_empresas` + empresa). Sem vínculo → **401** "Você não tem mais acesso a
-  esta empresa". Empresa suspensa → 403 "Empresa suspensa", como hoje.
+  esta empresa". Empresa suspensa → 403 "Empresa suspensa", como hoje — exceto se a pessoa tiver outra empresa
+  ativa: aí a sessão vira provisória (`req.empresa = null`) para escolher outra sem logar de novo (ver Notas).
 - Sem `emp` (tokens antigos ou login provisório): se a pessoa tem **exatamente um** vínculo, ele vale como empresa
   ativa (tokens de antes da implantação continuam funcionando); com vários, `req.empresa = null` (login
   provisório); com **zero** → 401 "Nenhuma empresa vinculada a este usuário" (volta para o login em vez de ficar
@@ -240,11 +241,19 @@ Tudo ainda é ambiente de desenvolvimento, sem janela de manutenção. Ordem, co
   compartilhados (com outra empresa), como no desenho da spec; a migração foi verificada rodando em
   `campax_dev` em vez de um teste Vitest (ver acima); vincular um `platform_admin` pela API responde 404 (ver
   acima).
-- **Pendências conhecidas:** vínculos criados por um superadmin pela aba "Usuários" da empresa (não pela
-  plataforma) ficam com `created_by` `NULL`; as páginas da plataforma chamam `mutateAsync` sem `try/catch` (o
-  toast de erro aparece, mas a promise rejeitada não é tratada); desvincular pela página de usuário da
-  plataforma não tem confirmação; um usuário cuja empresa ativa foi suspensa precisa logar de novo para escolher
-  outra; a regra do último superadmin ativo (U8) é "conferir depois atualizar" — não é atômica.
+- **Pendências resolvidas (2026-09-26, branch `fix/usuarios-globais-pendencias`):**
+  - `created_by` do vínculo criado pelo superadmin (`POST /users`): `prismaForEmpresa(empresaId, profileId)`
+    grava quem chamou.
+  - Páginas da plataforma tratam a promise de `mutateAsync` (o toast de erro continua vindo do hook);
+    "Remover" empresa na página do usuário pede confirmação.
+  - Empresa ativa suspensa com outra empresa ativa: `resolverEmpresaAtiva` devolve `provisorio`; as rotas de
+    empresa respondem 403 com `code: 'escolher_empresa'`, e o `apiClient` dispara um evento que recarrega
+    `/auth/me` — o `ProtectedRoute` leva para `/admin/escolher-empresa` (no subdomínio, para o login, que recusa
+    a empresa suspensa). Sem outra ativa, 403 "Empresa suspensa" como antes.
+  - Regra U8 atômica: `assertNaoDeixaSemSuperadmin(tx, profileId, empresaIds)` roda dentro da transação da
+    mudança, com `pg_advisory_xact_lock(1008, hashtext(empresa_id))` por empresa (ordenadas, sem deadlock) e a
+    conferência em SQL depois do lock. Coberto por `test/vinculos/concorrencia.test.ts` (antes da correção, as
+    duas ações simultâneas passavam).
 
 ## Fora de escopo
 
