@@ -7,6 +7,8 @@ export interface JwtPayload {
   sub: string;
   /** profiles.senha_alterada_em (ms) when the token was issued; absent = never changed. */
   sv?: number;
+  /** Active empresa (spec 10); absent = the only link, or a provisional login with several. */
+  emp?: string;
 }
 
 export function signToken(payload: JwtPayload): string {
@@ -22,6 +24,6 @@ export function sessaoVersao(profile: { senha_alterada_em: Date | null }): numbe
   return profile.senha_alterada_em?.getTime();
 }
 
-export function tokenFor(profile: { id: string; senha_alterada_em: Date | null }): string {
-  return signToken({ sub: profile.id, sv: sessaoVersao(profile) });
+export function tokenFor(profile: { id: string; senha_alterada_em: Date | null }, empresaId?: string): string {
+  return signToken({ sub: profile.id, sv: sessaoVersao(profile), emp: empresaId });
 }

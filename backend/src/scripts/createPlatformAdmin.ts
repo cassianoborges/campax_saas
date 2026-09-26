@@ -60,7 +60,6 @@ async function main() {
       full_name: fullName,
       password_hash: await hashPassword(password),
       role: 'platform_admin',
-      empresa_id: null,
     },
   });
   console.log(`✓ platform_admin criado: ${profile.email} (${profile.id})`);

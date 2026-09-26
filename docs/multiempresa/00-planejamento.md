@@ -201,7 +201,7 @@ Cada fase vira uma spec em `docs/multiempresa/NN-<nome>.md`, e depois um plano d
 | F6 | `07-camera-status.md` | Checagem de câmera dentro do backend, com empresa; desligar camera-status-api | F2 |
 | F7 | `08-subdominio-dominio-proprio.md` | Identificar a empresa pelo host, CORS dinâmico, SSL (pós-MVP) — **no ar em 2026-09-26** | F4, Q6 |
 | F8 | `09-piloto.md` | Cadastrar a 2ª funerária, checklist de validação, monitoramento | F2–F6 |
-| F9 | `10-usuarios-globais.md` | Cadastro global de usuários na plataforma, um usuário em várias empresas, escolha/troca da empresa ativa (pós-MVP) — **spec em revisão** | F3, F7 |
+| F9 | `10-usuarios-globais.md` | Cadastro global de usuários na plataforma, um usuário em várias empresas, escolha/troca da empresa ativa (pós-MVP) — **no ar em 2026-09-26** | F3, F7 |
 
 F5 e F6 podem andar em paralelo com F3/F4. **MVP = F0 a F6 + F8.** F7, limites por plano e cobrança ficam
 para depois.

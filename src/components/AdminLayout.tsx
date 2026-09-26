@@ -3,7 +3,9 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { AlterarSenhaDialog } from '@/components/AlterarSenhaDialog';
+import { TrocarEmpresaDialog } from '@/components/TrocarEmpresaDialog';
 import { EmpresaLogo } from '@/components/EmpresaLogo';
+import { HOST_SLUG } from '@/lib/hostEmpresa';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import {
     LayoutDashboard,
@@ -29,7 +31,7 @@ interface AdminLayoutProps {
 export function AdminLayout({ children, activeSection }: AdminLayoutProps) {
     const navigate = useNavigate();
     const location = useLocation();
-    const { signOut, isSuperadmin, isAdmin, empresa } = useAuth();
+    const { signOut, isSuperadmin, isAdmin, empresa, empresas } = useAuth();
     // B1: the admin panel shows the funerária's logo and name, but keeps the Campax colors.
     const nomePainel = empresa?.nome_exibicao ?? 'Velório Online';
     const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
@@ -123,6 +125,7 @@ export function AdminLayout({ children, activeSection }: AdminLayoutProps) {
                 )}
             </nav>
 
+            {!HOST_SLUG && empresas.length > 1 && <TrocarEmpresaDialog />}
             <AlterarSenhaDialog />
             <Button
                 variant="ghost"

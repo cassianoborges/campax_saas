@@ -62,16 +62,26 @@ describe('schema multiempresa', () => {
     await expect(prisma.cameras.create({ data: { ...camera, empresa_id: b.id } })).rejects.toMatchObject({ code: 'P2002' });
   });
 
-  it('platform_admin não pode ter empresa; papéis de empresa precisam de uma', async () => {
+  it('platform_admin nunca tem vínculo (triggers do 003)', async () => {
     const a = await createEmpresa();
-    const base = { id: randomUUID(), email: `${randomUUID()}@example.com` };
-    await expect(prisma.profiles.create({ data: { ...base, role: 'platform_admin', empresa_id: a.id } })).rejects.toThrow(
-      /profiles_empresa_platform_admin/,
+    const plat = await createProfile({ role: 'platform_admin' });
+    await expect(prisma.usuario_empresas.create({ data: { profile_id: plat.id, empresa_id: a.id } })).rejects.toThrow(
+      /usuario_empresas_sem_platform_admin/,
     );
-    await expect(
-      prisma.profiles.create({ data: { ...base, id: randomUUID(), role: 'admin', empresa_id: null } }),
-    ).rejects.toThrow(/profiles_empresa_platform_admin/);
-    await expect(createProfile({ role: 'platform_admin' })).resolves.toMatchObject({ empresa_id: null });
+    const admin = await createProfile({ role: 'admin', empresa_id: a.id });
+    await expect(prisma.profiles.update({ where: { id: admin.id }, data: { role: 'platform_admin' } })).rejects.toThrow(
+      /profiles_platform_admin_sem_vinculo/,
+    );
+    const semEmpresa = await createProfile({ role: 'admin', empresa_id: null });
+    await expect(prisma.usuario_empresas.count({ where: { profile_id: semEmpresa.id } })).resolves.toBe(0);
+  });
+
+  it('empresa com usuário vinculado não pode ser apagada; apagar o usuário apaga o vínculo', async () => {
+    const a = await createEmpresa();
+    const user = await createProfile({ role: 'viewer', empresa_id: a.id });
+    await expect(prisma.empresas.delete({ where: { id: a.id } })).rejects.toThrow();
+    await prisma.profiles.delete({ where: { id: user.id } });
+    await expect(prisma.usuario_empresas.count({ where: { empresa_id: a.id } })).resolves.toBe(0);
   });
 
   it('empresa com dados não pode ser apagada (RESTRICT)', async () => {

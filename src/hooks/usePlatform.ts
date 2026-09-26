@@ -59,6 +59,7 @@ export interface UsuarioEmpresa {
     role: TenantRole;
     is_active: boolean;
     created_at: string;
+    outras_empresas: number;
 }
 
 export interface ModeloGlobal {
@@ -187,7 +188,17 @@ export function usePlatformUsuarios(empresaId: string | undefined) {
         onError: onError('Erro ao alterar o usuário'),
     });
 
-    return { ...query, create, resetSenha, setAtivo };
+    const vincularExistente = useMutation({
+        mutationFn: (userId: string) => apiClient.put(`/platform/usuarios/${userId}/empresas/${empresaId}`),
+        onSuccess: () => {
+            invalidate();
+            queryClient.invalidateQueries({ queryKey: ['platform', 'usuarios'] });
+            toast({ title: 'Usuário vinculado' });
+        },
+        onError: onError('Erro ao vincular'),
+    });
+
+    return { ...query, create, resetSenha, setAtivo, vincularExistente };
 }
 
 export function usePlatformModelos() {

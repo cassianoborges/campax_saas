@@ -4,9 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { useAuth } from '@/hooks/useAuth';
 import { AlterarSenhaDialog } from '@/components/AlterarSenhaDialog';
-import { Building, LogOut, Menu, MessageSquareHeart } from 'lucide-react';
+import { Building, LogOut, Menu, MessageSquareHeart, Users } from 'lucide-react';
 
-type PlatformSection = 'empresas' | 'modelos';
+type PlatformSection = 'empresas' | 'usuarios' | 'modelos';
 
 interface PlatformLayoutProps {
     children: ReactNode;
@@ -56,6 +56,7 @@ export function PlatformLayout({ children, activeSection }: PlatformLayoutProps)
             <div className="mb-10">{brand}</div>
             <nav className="flex-1 space-y-2">
                 {navItem('empresas', 'Empresas', '/platform', Building)}
+                {navItem('usuarios', 'Usuários', '/platform/usuarios', Users)}
                 {navItem('modelos', 'Modelos de homenagem', '/platform/modelos-homenagem', MessageSquareHeart)}
             </nav>
             {profile && <p className="text-cream/40 text-xs mb-3 truncate">{profile.email}</p>}

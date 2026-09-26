@@ -3,7 +3,7 @@ import { apiClient } from '@/lib/apiClient';
 import { Profile } from './useAuth';
 import { UserRole } from './useRole';
 
-export type ProfileRow = Profile;
+export type ProfileRow = Profile & { outras_empresas: number };
 
 export function useUsers() {
     const queryClient = useQueryClient();
@@ -68,5 +68,12 @@ export function useUsers() {
         },
     });
 
-    return { users, isLoading, updateRole, toggleActive, createUser, updateUser };
+    const removerDaEmpresa = useMutation({
+        mutationFn: async (userId: string) => {
+            await apiClient.delete(`/users/${userId}/vinculo`);
+        },
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
+    });
+
+    return { users, isLoading, updateRole, toggleActive, createUser, updateUser, removerDaEmpresa };
 }

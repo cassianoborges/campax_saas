@@ -10,6 +10,7 @@ const ALLOWED = new Set([
   'routes/public.ts',
   'routes/auth.ts',
   'routes/platform.ts',
+  'routes/platformUsuarios.ts',
   'routes/internal.ts',
   'auth/middleware.ts',
   'realtime/socket.ts',

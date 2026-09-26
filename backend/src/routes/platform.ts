@@ -8,9 +8,10 @@ import { prisma } from '../prisma';
 import { isReservedSlug } from '../lib/empresaHost';
 import { requirePlatformAdmin } from '../auth/middleware';
 import { hashPassword, MIN_PASSWORD_LENGTH, novaSenha } from '../auth/password';
-import { handleError, pick, TEMPLATE_FIELDS, TENANT_ROLES } from '../lib/http';
+import { EMAIL_RE, handleError, isTenantRole, pick, TEMPLATE_FIELDS } from '../lib/http';
 import { UPLOADS_DIR } from '../lib/uploads';
 import { notifyMediamtxSync } from '../lib/mediamtxSync';
+import { assertNaoDeixaSemSuperadmin } from '../tenant/superadmins';
 
 // Platform panel (spec docs/multiempresa/04-plataforma.md). Only platform_admin; uses the raw
 // prisma client on purpose — it works across empresas. There is no route that creates or
@@ -21,7 +22,6 @@ platformRouter.use(...requirePlatformAdmin);
 
 const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const COR_RE = /^#[0-9a-fA-F]{6}$/;
-const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const UFS = new Set(['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO']);
 
 // slug and hash_publico are immutable after creation (P1): the hash is in printed links/QR codes,
@@ -105,7 +105,7 @@ async function usoPorEmpresa(empresaIds?: string[]) {
   const now = new Date();
   const trintaDias = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   const [usuarios, cameras, salas, velorios, aoVivo, acessos] = await Promise.all([
-    prisma.profiles.groupBy({ by: ['empresa_id'], where: { ...where, empresa_id: empresaIds ? { in: empresaIds } : { not: null } }, _count: true }),
+    prisma.usuario_empresas.groupBy({ by: ['empresa_id'], where, _count: true }),
     prisma.cameras.groupBy({ by: ['empresa_id'], where, _count: true }),
     prisma.sala_velorio.groupBy({ by: ['empresa_id'], where, _count: true }),
     prisma.velorios.groupBy({ by: ['empresa_id'], where, _count: true }),
@@ -172,7 +172,8 @@ platformRouter.post('/empresas', async (req, res) => {
       await tx.profiles.create({
         data: {
           id: randomUUID(), email, password_hash, role: 'superadmin',
-          full_name: body.superadmin?.full_name || null, empresa_id: created.id,
+          full_name: body.superadmin?.full_name || null,
+          vinculos: { create: { empresa_id: created.id, created_by: req.profile!.id } },
         },
       });
       return created;
@@ -267,19 +268,22 @@ platformRouter.delete('/empresas/:id/logo', async (req, res) => {
 // ---------------------------------------------------------------------------------------------
 // Users of an empresa (support: create, reset password, activate/deactivate)
 
-function isTenantRole(role: unknown): role is (typeof TENANT_ROLES)[number] {
-  return typeof role === 'string' && (TENANT_ROLES as readonly string[]).includes(role);
-}
-
 async function usuarioDaEmpresa(empresaId: string, userId: string) {
-  return prisma.profiles.findFirstOrThrow({ where: { id: userId, empresa_id: empresaId } });
+  return prisma.profiles.findFirstOrThrow({ where: { id: userId, vinculos: { some: { empresa_id: empresaId } } } });
 }
 
 platformRouter.get('/empresas/:id/usuarios', async (req, res) => {
   try {
     await prisma.empresas.findUniqueOrThrow({ where: { id: req.params.id }, select: { id: true } });
-    const users = await prisma.profiles.findMany({ where: { empresa_id: req.params.id }, orderBy: { created_at: 'asc' } });
-    res.json({ success: true, data: users.map(omitPasswordHash) });
+    const users = await prisma.profiles.findMany({
+      where: { vinculos: { some: { empresa_id: req.params.id } } },
+      include: { _count: { select: { vinculos: true } } },
+      orderBy: { created_at: 'asc' },
+    });
+    res.json({
+      success: true,
+      data: users.map(({ password_hash, _count, ...u }) => ({ ...u, outras_empresas: _count.vinculos - 1 })),
+    });
   } catch (error) {
     handleError(res, error);
   }
@@ -295,7 +299,10 @@ platformRouter.post('/empresas/:id/usuarios', async (req, res) => {
 
     await prisma.empresas.findUniqueOrThrow({ where: { id: req.params.id }, select: { id: true } });
     const user = await prisma.profiles.create({
-      data: { id: randomUUID(), email, password_hash: await hashPassword(password), role, full_name: full_name || null, empresa_id: req.params.id },
+      data: {
+        id: randomUUID(), email, password_hash: await hashPassword(password), role, full_name: full_name || null,
+        vinculos: { create: { empresa_id: req.params.id, created_by: req.profile!.id } },
+      },
     });
     log(req, 'criar-usuario', req.params.id, `usuario=${user.id} papel=${role}`);
     res.json({ success: true, data: omitPasswordHash(user) });
@@ -322,10 +329,8 @@ platformRouter.patch('/empresas/:id/usuarios/:uid/ativo', async (req, res) => {
     const is_active = !!req.body?.is_active;
     const user = await usuarioDaEmpresa(req.params.id, req.params.uid);
     if (!is_active && user.role === 'superadmin' && user.is_active) {
-      const outros = await prisma.profiles.count({
-        where: { empresa_id: req.params.id, role: 'superadmin', is_active: true, id: { not: user.id } },
-      });
-      if (outros === 0) return bad(res, 'Não é possível desativar o último superadmin ativo da empresa');
+      const vinculos = await prisma.usuario_empresas.findMany({ where: { profile_id: user.id }, select: { empresa_id: true } });
+      await assertNaoDeixaSemSuperadmin(user.id, vinculos.map((v) => v.empresa_id));
     }
     const updated = await prisma.profiles.update({ where: { id: user.id }, data: { is_active } });
     log(req, is_active ? 'ativar-usuario' : 'desativar-usuario', req.params.id, `usuario=${user.id}`);

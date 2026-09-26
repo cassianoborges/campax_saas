@@ -6,6 +6,7 @@ import { emitHomenagensChanged } from '../realtime/socket';
 import { falecidoFotoPublicPath, uploadFotoFalecido } from '../lib/uploads';
 import { handleError, pick, VELORIO_FIELDS } from '../lib/http';
 import { assertPertence } from '../tenant/prismaForEmpresa';
+import { criadoresPorId } from '../tenant/criadores';
 
 export const velorioInclude = {
   sala: {
@@ -109,10 +110,7 @@ veloriosRouter.get('/audit', async (req, res) => {
     });
 
     const creatorIds = [...new Set(velorios.map((v) => v.created_by).filter(Boolean))] as string[];
-    const creators = creatorIds.length
-      ? await req.db!.profiles.findMany({ where: { id: { in: creatorIds } }, select: { id: true, email: true, full_name: true } })
-      : [];
-    const creatorMap = new Map(creators.map((c) => [c.id, c]));
+    const creatorMap = await criadoresPorId(creatorIds);
 
     const data = velorios.map((v) => ({
       ...v,

@@ -11,7 +11,7 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, requiredRole, scope = 'empresa' }: ProtectedRouteProps) {
-    const { user, loading, role, profileLoading } = useAuth();
+    const { user, loading, role, profileLoading, precisaEscolherEmpresa } = useAuth();
 
     if (loading || (user && profileLoading)) {
         return (
@@ -26,6 +26,10 @@ export function ProtectedRoute({ children, requiredRole, scope = 'empresa' }: Pr
 
     if (!user) {
         return <Navigate to="/admin" replace />;
+    }
+
+    if (scope === 'empresa' && precisaEscolherEmpresa) {
+        return <Navigate to="/admin/escolher-empresa" replace />;
     }
 
     // platform_admin outranks every company role, so the scope must be checked before the role.

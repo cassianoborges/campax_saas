@@ -33,7 +33,8 @@ describe('papéis', () => {
   it('usuário criado por superadmin de A fica em A', async () => {
     const res = await request(app).post('/users').set(f.as(f.A.users.superadmin)).send({ email: 'novo@example.com', password: '12345678', role: 'operador' });
     expect(res.status).toBe(200);
-    expect(res.body.data.empresa_id).toBe(f.A.empresa.id);
+    const vinculo = await prisma.usuario_empresas.findUnique({ where: { profile_id_empresa_id: { profile_id: res.body.data.id, empresa_id: f.A.empresa.id } } });
+    expect(vinculo).toBeTruthy();
   });
 
   it('superadmin não desativa nem rebaixa a si mesmo', async () => {

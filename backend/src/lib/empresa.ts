@@ -21,3 +21,10 @@ export function toEmpresaPublica<T extends Record<string, unknown>>(empresa: T |
   for (const key of Object.keys(EMPRESA_PUBLIC_SELECT)) result[key] = empresa[key];
   return result as EmpresaPublica;
 }
+
+/** An empresa in a user's list (login, /auth/me): public fields plus whether it can be chosen. */
+export type EmpresaResumo = EmpresaPublica & { ativo: boolean };
+
+export function toEmpresaResumo(empresa: Record<string, unknown> & { ativo: boolean }): EmpresaResumo {
+  return { ...(toEmpresaPublica(empresa) as EmpresaPublica), ativo: empresa.ativo };
+}
