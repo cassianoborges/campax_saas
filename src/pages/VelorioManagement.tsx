@@ -7,7 +7,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { AdminLayout } from '@/components/AdminLayout';
-import { useVelorios, getVelorioStatus } from '@/hooks/useVelorios';
+import { useVelorios, getVelorioStatus, Velorio } from '@/hooks/useVelorios';
+import { NotaFalecimentoDialog } from '@/components/nota-falecimento/NotaFalecimentoDialog';
 import { useSalasVelorio } from '@/hooks/useSalasVelorio';
 import { useHomenagensTemplates } from '@/hooks/useHomenagensTemplates';
 import { useAuth } from '@/hooks/useAuth';
@@ -17,6 +18,7 @@ import { usePresenceMultiple } from '@/hooks/usePresenceMultiple';
 import { useVisitantes } from '@/hooks/useVisitantes';
 import { exportVisitantesToCSV, downloadCSV } from '@/services/visitantesService';
 import { uploadFotoFalecido } from '@/services/storageService';
+import { fromDatetimeLocalValue, toDatetimeLocalValue } from '@/lib/datetimeLocal';
 import { checkMultipleCameras } from '@/services/cameraStatusService';
 import {
   Plus,
@@ -32,6 +34,7 @@ import {
   Download,
   CheckCircle2,
   Share2,
+  FileImage,
   Calendar,
   Camera,
   AlertTriangle,
@@ -233,22 +236,6 @@ interface VelorioFormData {
   google_maps_url_sepultamento: string;
 }
 
-// Converte um timestamp armazenado (UTC) para o valor esperado por um
-// <input type="datetime-local">, que representa hora LOCAL, não UTC.
-// Usar toISOString() aqui erroneamente extrairia os dígitos em UTC.
-function toDatetimeLocalValue(isoString: string): string {
-  const date = new Date(isoString);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
-
-// Converte o valor de um <input type="datetime-local"> (hora local, sem
-// timezone) para um ISO string com o offset correto antes de enviar ao
-// Supabase. Sem isso, a string sem timezone é gravada como se já fosse UTC.
-function fromDatetimeLocalValue(localValue: string): string {
-  return new Date(localValue).toISOString();
-}
-
 const VelorioManagement = () => {
   const { toast } = useToast();
   const { isOperador, isAdmin } = useAuth();
@@ -266,6 +253,7 @@ const VelorioManagement = () => {
   const [editingVelorioId, setEditingVelorioId] = useState<string | null>(null);
   const [homenagensTarget, setHomenagensTarget] = useState<{ id: string; nome: string } | null>(null);
   const [presencaTarget, setPresencaTarget] = useState<{ id: string; nome: string } | null>(null);
+  const [notaTarget, setNotaTarget] = useState<Velorio | null>(null);
   const [shareTarget, setShareTarget] = useState<{ nome: string; token: string } | null>(null);
   const [createdVelorioName, setCreatedVelorioName] = useState('');
   const [formData, setFormData] = useState<VelorioFormData>({
@@ -867,6 +855,11 @@ const VelorioManagement = () => {
                         <UserCheck className="w-4 h-4" />
                       </Button>
                       {isOperador && (
+                        <Button variant="ghost" size="icon" title="Nota de falecimento" onClick={() => setNotaTarget(velorio)}>
+                          <FileImage className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {isOperador && (
                         <Button variant="ghost" size="icon" onClick={() => openEditDialog(velorio)}>
                           <Pencil className="w-4 h-4" />
                         </Button>
@@ -896,6 +889,10 @@ const VelorioManagement = () => {
           <PresencaDialog velorio_id={presencaTarget.id} velorio_nome={presencaTarget.nome} />
         )}
       </Dialog>
+
+      {notaTarget && (
+        <NotaFalecimentoDialog velorio={notaTarget} open={!!notaTarget} onOpenChange={(open) => { if (!open) setNotaTarget(null); }} />
+      )}
 
       <Dialog open={!!shareTarget} onOpenChange={(open) => { if (!open) setShareTarget(null); }}>
         {shareTarget && (

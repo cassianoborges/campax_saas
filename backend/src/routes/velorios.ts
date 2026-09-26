@@ -41,6 +41,20 @@ const SALA_INVALIDA = { foreignKey: 'Sala inválida' };
 // @db.Date columns: the form sends "YYYY-MM-DD", which Prisma rejects (it wants a full ISO DateTime).
 const DATE_ONLY_FIELDS = ['data_nascimento', 'data_falecimento'] as const;
 
+export const FAMILIARES_MAX = 400;
+const MSG_FAMILIARES = `Familiares: máximo de ${FAMILIARES_MAX} caracteres`;
+
+class CampoInvalidoError extends Error {}
+
+// Free text for the death notice ("Deixa a esposa…"). Blank means "remove it".
+function normalizarFamiliares(value: unknown): string | null | undefined {
+  if (value === undefined || value === null) return value;
+  if (typeof value !== 'string') throw new CampoInvalidoError(MSG_FAMILIARES);
+  const texto = value.trim();
+  if (texto.length > FAMILIARES_MAX) throw new CampoInvalidoError(MSG_FAMILIARES);
+  return texto || null;
+}
+
 function velorioFields(body: unknown) {
   // token_acesso, created_by, foto_falecido and empresa_id never come from the client.
   const fields = pick(body, VELORIO_FIELDS);
@@ -49,6 +63,7 @@ function velorioFields(body: unknown) {
     if (value === '') fields[field] = null;
     else if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) fields[field] = new Date(`${value}T00:00:00.000Z`);
   }
+  if ('familiares' in fields) fields.familiares = normalizarFamiliares(fields.familiares);
   return fields;
 }
 
@@ -170,6 +185,7 @@ veloriosRouter.post('/', requireRole('operador'), async (req, res) => {
     });
     res.json({ success: true, data: velorio });
   } catch (error) {
+    if (error instanceof CampoInvalidoError) return res.status(400).json({ success: false, error: error.message });
     handleError(res, error, SALA_INVALIDA);
   }
 });
@@ -181,6 +197,7 @@ veloriosRouter.patch('/:id', requireRole('operador'), async (req, res) => {
     const velorio = await req.db!.velorios.update({ where: { id: req.params.id }, data: fields, include: velorioInclude });
     res.json({ success: true, data: velorio });
   } catch (error) {
+    if (error instanceof CampoInvalidoError) return res.status(400).json({ success: false, error: error.message });
     handleError(res, error, SALA_INVALIDA);
   }
 });

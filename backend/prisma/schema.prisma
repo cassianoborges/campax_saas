@@ -281,6 +281,7 @@ model velorios {
   data_sepultamento            DateTime?             @db.Timestamptz(6)
   local_sepultamento           String?               @db.VarChar(255)
   google_maps_url_sepultamento String?
+  familiares                   String?
   empresa_id                   String                @db.Uuid
   terms_acceptances            terms_acceptances[]
   velorio_access_logs          velorio_access_logs[]

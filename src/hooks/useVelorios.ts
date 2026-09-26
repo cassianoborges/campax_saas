@@ -24,6 +24,7 @@ export interface Velorio {
     data_sepultamento?: string | null;
     local_sepultamento?: string | null;
     google_maps_url_sepultamento?: string | null;
+    familiares?: string | null;
     created_at: string;
     updated_at: string;
     sala?: {
@@ -63,9 +64,10 @@ export interface VelorioFormData {
     data_falecimento?: string;
     mensagem_homenagem?: string;
     foto_falecido?: string;
-    data_sepultamento?: string;
-    local_sepultamento?: string;
+    data_sepultamento?: string | null;
+    local_sepultamento?: string | null;
     google_maps_url_sepultamento?: string;
+    familiares?: string | null;
 }
 
 export function useVelorios() {
