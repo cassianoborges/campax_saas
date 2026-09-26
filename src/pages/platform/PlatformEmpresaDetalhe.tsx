@@ -269,7 +269,11 @@ function UsuariosTab({ empresaId }: { empresaId: string }) {
                   size="sm"
                   onClick={async () => {
                     const password = generatePassword(12);
-                    await resetSenha.mutateAsync({ userId: u.id, password });
+                    try {
+                      await resetSenha.mutateAsync({ userId: u.id, password });
+                    } catch {
+                      return; // the hook's onError already shows the toast
+                    }
                     setSenhaGerada({ email: u.email, password });
                   }}
                 >
@@ -352,7 +356,11 @@ function UsuariosTab({ empresaId }: { empresaId: string }) {
               variant="gold"
               disabled={!novo.email || novo.password.length < 8 || create.isPending}
               onClick={async () => {
-                await create.mutateAsync({ email: novo.email.trim(), password: novo.password, role: novo.role, full_name: novo.full_name.trim() || undefined });
+                try {
+                  await create.mutateAsync({ email: novo.email.trim(), password: novo.password, role: novo.role, full_name: novo.full_name.trim() || undefined });
+                } catch {
+                  return; // the hook's onError already shows the toast
+                }
                 setSenhaGerada({ email: novo.email.trim().toLowerCase(), password: novo.password });
                 setNovo({ full_name: '', email: '', role: 'admin', password: generatePassword(12) });
               }}

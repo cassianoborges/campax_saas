@@ -4,6 +4,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { PlatformLayout, StatusBadge } from '@/components/PlatformLayout';
 import { usePlatformEmpresas } from '@/hooks/usePlatform';
 import { usePlatformUsuarioGlobal } from '@/hooks/usePlatformUsuariosGlobais';
@@ -70,7 +81,11 @@ const PlatformUsuarioDetalhe = () => {
                                 variant="outline"
                                 onClick={async () => {
                                     const password = generatePassword(12);
-                                    await resetSenha.mutateAsync(password);
+                                    try {
+                                        await resetSenha.mutateAsync(password);
+                                    } catch {
+                                        return; // the hook's onError already shows the toast
+                                    }
                                     setSenhaGerada(password);
                                 }}
                             >
@@ -104,10 +119,29 @@ const PlatformUsuarioDetalhe = () => {
                                     {e.nome_exibicao}
                                     {!e.ativo && <span className="ml-2 text-xs text-muted-foreground">(suspensa)</span>}
                                 </button>
-                                <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10" disabled={desvincular.isPending} onClick={() => desvincular.mutate(e.id)}>
-                                    <Trash2 className="w-4 h-4 mr-2" />
-                                    Remover
-                                </Button>
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10" disabled={desvincular.isPending}>
+                                            <Trash2 className="w-4 h-4 mr-2" />
+                                            Remover
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Remover da empresa {e.nome_exibicao}?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                {usuario.email} perde o acesso a esta empresa na próxima ação.
+                                                {usuario.empresas.length === 1 && ' Sem nenhuma empresa vinculada, não consegue mais entrar.'}
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                            <AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={() => desvincular.mutate(e.id)}>
+                                                Remover
+                                            </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
                             </div>
                         ))}
                         {disponiveis.length > 0 && (
@@ -122,7 +156,11 @@ const PlatformUsuarioDetalhe = () => {
                                     variant="gold"
                                     disabled={!novaEmpresa || vincular.isPending}
                                     onClick={async () => {
-                                        await vincular.mutateAsync(novaEmpresa);
+                                        try {
+                                            await vincular.mutateAsync(novaEmpresa);
+                                        } catch {
+                                            return; // the hook's onError already shows the toast
+                                        }
                                         setNovaEmpresa('');
                                     }}
                                 >
